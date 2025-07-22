@@ -1,4 +1,4 @@
-from Streaming.core.streamer import Streamer
+from src.tiff_stitching.core.streamer import Streamer
 from Adapters.test_stardist_kartezio import map_angle_to_filter_sobel_r4
 import numpy as np
 import cv2

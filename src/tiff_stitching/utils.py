@@ -6,7 +6,7 @@ import numpy as np
 from typing import Tuple
 import cv2
 from skimage.morphology import disk
-from Streaming.config import TILE_SIZE, OVERLAP, STRIDE, CHUNK_SIZE
+from src.tiff_stitching.config import TILE_SIZE,OVERLAP,STRIDE,CHUNK_SIZE
 
 BBox = Tuple[int, int, int, int] # (x0, y0, x1, y1)
 Pad = Tuple[int, int, int, int] # (left, top, right, bottom)

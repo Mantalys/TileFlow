@@ -4,8 +4,8 @@ Debug visualization for tile, core, and chunk layouts.
 
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
-from Streaming.config import OVERLAP, CHUNK_SIZE
-from Streaming.utils import build_tiles
+from config import OVERLAP, CHUNK_SIZE
+from utils import build_tiles
 
 
 def visualize_layout(H: int, W: int) -> None:

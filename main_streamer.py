@@ -2,8 +2,8 @@ from tifffile import imread
 
 from skimage.exposure import rescale_intensity
 import numpy as np
-from Streaming.core.streamer import ImageStreamer, StreamerConfig
-from Streaming.core.model import StreamingModel, SobelMagnitude
+from src.tiff_stitching.core.streamer import ImageStreamer, StreamerConfig
+from src.tiff_stitching.core.model import StreamingModel, SobelMagnitude
 from Adapters.test_stardist_kartezio import Stardist2
 from csbdeep.utils import normalize
 

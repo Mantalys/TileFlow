@@ -1,11 +1,17 @@
 [project]
-name = "tiff-stitching"
+name = "tiff_stitching"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "csbdeep>=0.8.1",
+    "matplotlib>=3.10.3",
     "numpy>=2.3.1",
+    "opencv-python>=4.11.0.86",
+    "pydantic>=2.11.7",
+    "pyqt6>=6.9.1",
+    "scikit-image>=0.25.2",
     "tifffile>=2025.6.11",
     "zarr>=3.1.0",
 ]

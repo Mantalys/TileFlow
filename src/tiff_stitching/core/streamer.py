@@ -1,6 +1,5 @@
 from pydantic import BaseModel
-from Streaming.feature_merger import stamp
-
+from src.tiff_stitching.feature_merger import stamp
 import numpy as np
 import cv2
 
