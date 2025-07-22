@@ -9,6 +9,7 @@ from utils import BBox, Shape
 from skimage.exposure import rescale_intensity
 import cv2
 
+
 class TileManager:
     _cache: Dict[BBox, np.ndarray] = {}
     _tiff: TiffFile = None
@@ -21,7 +22,7 @@ class TileManager:
         """
         Initialize file handles for TIFF.
         """
-        cls._tiff = TiffFile(path) # TODO replace by imread + zarr
+        cls._tiff = TiffFile(path)  # TODO replace by imread + zarr
         cls._cache.clear()
         cls._level = 0
 
@@ -71,12 +72,12 @@ class TileManagerFCYX(TileManager):
         array = cls._tiff.asarray()[:, 3, 400:, 256:]  # CD8 channel
         F, H, W = array.shape
         array = array[cls._frame]  # take the first frame to get shape
-        cls._array = rescale_intensity(array, in_range=(210, 500), out_range=(0, 1)).astype(np.float32)
+        cls._array = rescale_intensity(
+            array, in_range=(210, 500), out_range=(0, 1)
+        ).astype(np.float32)
         cls._frames = F
         cls._shape = (1, H, W)
-        cv2.imwrite(
-            "first_frame.png", (cls._array * 255).astype(np.uint8)
-        )
+        cv2.imwrite("first_frame.png", (cls._array * 255).astype(np.uint8))
 
     @classmethod
     def next_frame(cls) -> bool:
@@ -87,12 +88,13 @@ class TileManagerFCYX(TileManager):
         cls._frame += 1
         if cls._frame < cls._frames:
             array = cls._tiff.asarray()[cls._frame, 3, 400:, 256:]
-            cls._array = rescale_intensity(array, in_range=(210, 500), out_range=(0, 1)).astype(np.float32)
+            cls._array = rescale_intensity(
+                array, in_range=(210, 500), out_range=(0, 1)
+            ).astype(np.float32)
             cls._cache.clear()
             return True
         return False
 
-   
 
 class TileManagerCYX(TileManager):
     @classmethod

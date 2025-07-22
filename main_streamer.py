@@ -22,28 +22,34 @@ if __name__ == "__main__":
     model_path = f"Stardist/models/{model_name}/model.onnx"
 
     model = StreamingModel(
-        streamer=ImageStreamer(config=StreamerConfig(tile_size=256, overlap=8, chunk_size=512, n_features=2)),
+        streamer=ImageStreamer(
+            config=StreamerConfig(
+                tile_size=256, overlap=8, chunk_size=512, n_features=2
+            )
+        ),
         backend=Stardist2(model_path, directions=rays),
-        postprocessing=SobelMagnitude()
+        postprocessing=SobelMagnitude(),
     )
 
     image = r"c:\Users\corta\Documents\Mantalys\Mantaplex\Dataset\luca_dapi.tif"
-    image_np = imread(image).astype(np.float32)[0] # Read the image and convert to float32
+    image_np = imread(image).astype(np.float32)[
+        0
+    ]  # Read the image and convert to float32
     # image_np = rescale_intensity(image_np, in_range=(1, 10), out_range=(0, 1))  # Rescale intensity to [0, 1]
-    image_np = normalize(image_np, pmin=1, pmax=99.8, axis=(0, 1))  # Normalize to [0, 1]
+    image_np = normalize(
+        image_np, pmin=1, pmax=99.8, axis=(0, 1)
+    )  # Normalize to [0, 1]
     # image_np = rescale_intensity(image_np, out_range=(0, 1))
     time_start = time.time()
     output = model.stream(image_np)
     print(f"Streaming time: {time.time() - time_start:.2f} seconds")
     plt.figure(figsize=(10, 10))
     plt.subplot(1, 2, 1)
-    plt.imshow(image_np, cmap='viridis')
+    plt.imshow(image_np, cmap="viridis")
     plt.title("Original Image")
     plt.axis("off")
     plt.subplot(1, 2, 2)
-    plt.imshow(output, cmap='viridis')
+    plt.imshow(output, cmap="viridis")
     plt.title("Labels")
     plt.axis("off")
     plt.show()
-
-

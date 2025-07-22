@@ -6,10 +6,10 @@ import numpy as np
 from typing import Tuple
 import cv2
 from skimage.morphology import disk
-from src.tiff_stitching.config import TILE_SIZE,OVERLAP,STRIDE,CHUNK_SIZE
+from src.tiff_stitching.config import TILE_SIZE, OVERLAP, STRIDE, CHUNK_SIZE
 
-BBox = Tuple[int, int, int, int] # (x0, y0, x1, y1)
-Pad = Tuple[int, int, int, int] # (left, top, right, bottom)
+BBox = Tuple[int, int, int, int]  # (x0, y0, x1, y1)
+Pad = Tuple[int, int, int, int]  # (left, top, right, bottom)
 Shape = Tuple[int, int, int]  # (C, H, W)
 Edge = Tuple[bool, bool, bool, bool]  # (left, top, right, bottom)
 
@@ -30,29 +30,29 @@ def labels_to_polygons(labels: np.ndarray, convex_hull=False, smooth=None):
 
     unique_labels = np.unique(labels)
     image_height, image_width = labels.shape
-    
+
     for label in unique_labels:
         if label == 0:
             continue  # Ignore background label
-            
+
         # Get bbox for this label
         where = np.where(labels == label)
         y_min, y_max = np.min(where[0]), np.max(where[0])
         x_min, x_max = np.min(where[1]), np.max(where[1])
-        
+
         # Check if label touches image edges
         edge = (
-            x_min == 0,              # left
-            y_min == 0,              # top
-            x_max == image_width-1,  # right
-            y_max == image_height-1  # bottom
+            x_min == 0,  # left
+            y_min == 0,  # top
+            x_max == image_width - 1,  # right
+            y_max == image_height - 1,  # bottom
         )
         edges.append(edge)
-        
+
         # Crop to ROI
         mask = np.zeros((y_max - y_min + 1, x_max - x_min + 1), dtype=np.uint8)
-        mask[labels[y_min:y_max+1, x_min:x_max+1] == label] = 255
-        
+        mask[labels[y_min : y_max + 1, x_min : x_max + 1] == label] = 255
+
         # Apply smoothing if specified
         if smooth:
             kernel = disk(smooth)
@@ -110,6 +110,3 @@ def needed_by_future_chunks(
     H, W = image_size
     # if tile extends below or right of current chunk, it may still be needed
     return (y1 > cy1) or (x1 > cx1)
-
-
-

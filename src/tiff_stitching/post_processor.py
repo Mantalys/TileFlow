@@ -43,7 +43,7 @@ class PostProcessor:
             markers=markers,
             mask=probability_map > 0,
             watershed_line=True,
-            compactness=0
+            compactness=0,
         )
         print(f"Found {len(np.unique(labels)) - 1} objects")
         return labels.astype(np.uint16)

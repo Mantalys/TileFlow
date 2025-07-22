@@ -1,11 +1,10 @@
 from src.tiff_stitching.core.streamer import Streamer
-from Adapters.test_stardist_kartezio import map_angle_to_filter_sobel_r4
 import numpy as np
 import cv2
 from skimage.exposure import rescale_intensity
 from skimage.segmentation import watershed
 from skimage.morphology import disk
-import matplotlib.pyplot as plt
+
 
 MORPH_DISK_KERNEL = disk(1)
 
@@ -18,33 +17,16 @@ SOBEL_4 = {
 }
 
 
-class Stardist2:
-    def __init__(self, model_path, directions=8):
+class StardistS4:
+    def __init__(self, model_path):
         self.model_path = model_path
         self.session = rt.InferenceSession(model_path)
         self.input_name = self.session.get_inputs()[0].name
-        self.directions = []
-        if directions == 8:
-            self.directions = [0, 1, 2, 3, 4, 5, 6, 7]
-            self.mapping = map_angle_to_filter_sobel_r8
-        elif directions == 4:
-            self.directions = [0, 1, 2, 3]
-            self.mapping = map_angle_to_filter_sobel_r4
-        elif directions == -4:
-            self.directions = [0, 8, 16, 24]
-            self.mapping = map_angle_to_filter_sobel
-        elif directions == -8:
-            self.directions = [0, 4, 8, 12, 16, 20, 24, 28]
-            self.mapping = map_angle_to_filter_sobel
-            
-        if len(self.directions) == 0:
-            self.outputs = [self.session.get_outputs()[0].name]
+        self.directions = [0, 1, 2, 3]
         self.n_features = 2 if len(self.directions) > 0 else 1
 
     def batch(self, batch):
-        return self.session.run(
-                output_names=None, input_feed={self.input_name: batch}
-            )
+        return self.session.run(output_names=None, input_feed={self.input_name: batch})
 
     def predict_features(self, image):
         if self.directions == []:
@@ -56,7 +38,7 @@ class Stardist2:
             outputs = self.batch(image)
             gradients = outputs[1]
             filtered = [
-                cv2.filter2D(gradients[0, :, :, i], cv2.CV_32F, self.mapping[i])
+                cv2.filter2D(gradients[0, :, :, i], cv2.CV_32F, SOBEL_4[i])
                 for i in self.directions
             ]
             magnitude = np.max(filtered, axis=0)
@@ -70,7 +52,7 @@ class Stardist2:
 
     def predict(self, image):
         probability, magnitude = self.predict_features(image)
-        
+
         probability[probability < 0.1] = 0
         probability = rescale_intensity(probability, out_range=(0, 1))
         # magnitude[magnitude < 0] = 0
@@ -87,18 +69,21 @@ class Stardist2:
             mask=probability > 0,
             compactness=1,
             watershed_line=False,
-            connectivity=2
+            connectivity=2,
         )
 
         return labels
 
+
 class SobelMagnitude:
     def __init__(self):
-        self.directions = [0, 1, 2, 3] #, 4, 5, 6, 7]
+        self.directions = [0, 1, 2, 3]
 
     def postprocess(self, features):
         probability = features[0]  # Assuming the first feature is the probability map
-        magnitude = features[1]  # Assuming the second feature is the magnitude of gradients
+        magnitude = features[
+            1
+        ]  # Assuming the second feature is the magnitude of gradients
 
         probability[probability < 0.1] = 0
         probability = rescale_intensity(probability, out_range=(0, 1))
@@ -114,7 +99,7 @@ class SobelMagnitude:
             mask=probability > 0,
             compactness=0,
             watershed_line=True,
-            connectivity=2
+            connectivity=2,
         )
 
         return labels
@@ -125,11 +110,23 @@ class SobelMagnitude:
         # batch_probability[batch_probability < 0.005] = 0  # Ensure no negative values
         batch_gradients = batch[1]  # Assuming batch[1] contains the 32 gradients
 
-        batch_features = np.zeros((2, len(batch_probability), batch_probability.shape[1], batch_probability.shape[2]), dtype=np.float32)
-        batch_features[0] = batch_probability[:, :, :, 0]  # Probability map, assuming the first channel is the probability
+        batch_features = np.zeros(
+            (
+                2,
+                len(batch_probability),
+                batch_probability.shape[1],
+                batch_probability.shape[2],
+            ),
+            dtype=np.float32,
+        )
+        batch_features[0] = batch_probability[
+            :, :, :, 0
+        ]  # Probability map, assuming the first channel is the probability
         for tile_index in range(len(batch_probability)):
             filtered = [
-                cv2.filter2D(batch_gradients[tile_index, :, :, i], cv2.CV_32F, map_angle_to_filter_sobel_r4[i])
+                cv2.filter2D(
+                    batch_gradients[tile_index, :, :, i], cv2.CV_32F, SOBEL_4[i]
+                )
                 for i in self.directions
             ]
             magnitude = np.max(filtered, axis=0)
@@ -150,14 +147,13 @@ class StreamingModel:
         self.streamer.set_data(data)
         # self.streamer.preview()
         batchs = self.streamer.batchify(batch_size=16, scale=self.scale)
-        
+
         tile_index = 0
         for batch in batchs:
             p_batch = self.backend.batch(batch)
             batch_features = self.postprocessing.postprocess_batch(p_batch)
             # shape is (2, batch_size, height, width) for features
             # plot the first tile of the batch
-            
 
             tile_index = self.streamer.stamp_features(tile_index, batch_features)
         output = self.postprocessing.postprocess(self.streamer._reconstructed)
