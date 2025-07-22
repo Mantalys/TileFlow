@@ -10,6 +10,88 @@ import matplotlib.pyplot as plt
 MORPH_DISK_KERNEL = disk(1)
 
 
+SOBEL_4 = {
+    0: np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]]),
+    1: np.array([[-1, -2, -1], [0, 0, 0], [1, 2, 1]]),
+    2: np.array([[1, 0, -1], [2, 0, -2], [1, 0, -1]]),
+    3: np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]]),
+}
+
+
+class Stardist2:
+    def __init__(self, model_path, directions=8):
+        self.model_path = model_path
+        self.session = rt.InferenceSession(model_path)
+        self.input_name = self.session.get_inputs()[0].name
+        self.directions = []
+        if directions == 8:
+            self.directions = [0, 1, 2, 3, 4, 5, 6, 7]
+            self.mapping = map_angle_to_filter_sobel_r8
+        elif directions == 4:
+            self.directions = [0, 1, 2, 3]
+            self.mapping = map_angle_to_filter_sobel_r4
+        elif directions == -4:
+            self.directions = [0, 8, 16, 24]
+            self.mapping = map_angle_to_filter_sobel
+        elif directions == -8:
+            self.directions = [0, 4, 8, 12, 16, 20, 24, 28]
+            self.mapping = map_angle_to_filter_sobel
+            
+        if len(self.directions) == 0:
+            self.outputs = [self.session.get_outputs()[0].name]
+        self.n_features = 2 if len(self.directions) > 0 else 1
+
+    def batch(self, batch):
+        return self.session.run(
+                output_names=None, input_feed={self.input_name: batch}
+            )
+
+    def predict_features(self, image):
+        if self.directions == []:
+            outputs = self.session.run(
+                output_names=self.outputs, input_feed={self.input_name: image}
+            )
+            magnitude = None
+        else:
+            outputs = self.batch(image)
+            gradients = outputs[1]
+            filtered = [
+                cv2.filter2D(gradients[0, :, :, i], cv2.CV_32F, self.mapping[i])
+                for i in self.directions
+            ]
+            magnitude = np.max(filtered, axis=0)
+            magnitude[magnitude < 0] = 0
+            cv2.normalize(magnitude, magnitude, 0, 1, cv2.NORM_MINMAX)
+            # cv2.imwrite("magnitude.png", (magnitude * 255).astype(np.uint8))
+
+        probability_map = outputs[0][0, :, :, 0]
+
+        return probability_map, magnitude
+
+    def predict(self, image):
+        probability, magnitude = self.predict_features(image)
+        
+        probability[probability < 0.1] = 0
+        probability = rescale_intensity(probability, out_range=(0, 1))
+        # magnitude[magnitude < 0] = 0
+
+        markers_mask = ((probability > 0) & (magnitude < 0.1)).astype(np.uint8)
+        markers_mask = cv2.morphologyEx(markers_mask, cv2.MORPH_OPEN, MORPH_DISK_KERNEL)
+        # magnitude = rescale_intensity(magnitude, in_range=(0, 255))
+        # cv2.imwrite("magnitude.png", magnitude.astype(np.uint8) * 255)
+        markers = cv2.connectedComponents(markers_mask, connectivity=4)[1]
+
+        labels = watershed(
+            magnitude,
+            markers=markers,
+            mask=probability > 0,
+            compactness=1,
+            watershed_line=False,
+            connectivity=2
+        )
+
+        return labels
+
 class SobelMagnitude:
     def __init__(self):
         self.directions = [0, 1, 2, 3] #, 4, 5, 6, 7]
