@@ -4,7 +4,7 @@ Stamps per-tile masks into a chunk-level feature map with boundary clamping.
 
 import numpy as np
 from typing import Tuple
-from Streaming.utils import BBox
+from src.tiff_stitching.utils import BBox
 
 
 def stamp(

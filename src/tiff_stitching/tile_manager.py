@@ -5,7 +5,7 @@ Lazy loader and cache manager for image tiles (with optional halo padding).
 import numpy as np
 from typing import Dict
 from tifffile import TiffFile
-from Streaming.utils import BBox, Shape
+from utils import BBox, Shape
 from skimage.exposure import rescale_intensity
 import cv2
 

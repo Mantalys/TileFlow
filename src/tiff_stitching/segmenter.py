@@ -4,10 +4,10 @@ Wrapper for the instance-segmentation model.
 
 import numpy as np
 from typing import Dict
-from Streaming.tile_manager import TileManager
+from tile_manager import TileManager
 import cv2
 from Adapters.test_stardist_kartezio import Stardist2
-from Streaming.utils import BBox
+from utils import BBox
 
 
 stardist_model = r"c:\Users\corta\Documents\Mantalys\Mantaplex\Dev\pypelines\stardist-fluo_light.onnx"
