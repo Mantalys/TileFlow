@@ -4,6 +4,8 @@ import cv2
 from skimage.exposure import rescale_intensity
 from skimage.segmentation import watershed
 from skimage.morphology import disk
+import onnxruntime as rt
+
 
 
 MORPH_DISK_KERNEL = disk(1)
