@@ -2,7 +2,7 @@ from tifffile import imread
 
 from skimage.exposure import rescale_intensity
 import numpy as np
-from src.tiff_stitching.core.streamer import ImageStreamer, StreamerConfig
+from src.tiff_stitching.core.streamer import ImageStreamer, StreamerConfig, WSIStreamer
 from src.tiff_stitching.core.model import StreamingModel, SobelMagnitude, StardistS4
 from csbdeep.utils import normalize
 
@@ -24,9 +24,9 @@ if __name__ == "__main__":
     ]
 
     model = StreamingModel(
-        streamer=ImageStreamer(
+        streamer=WSIStreamer(
             config=StreamerConfig(
-                tile_size=128, overlap=8, chunk_size=512, n_features=2,image_size=image_np.shape,nb_chunks=1,context=16,
+                tile_size=256, overlap=64, chunk_size=512, n_features=2, nb_chunks=1, context=64,image_size=image_np.shape,
             )
         ),
         backend=StardistS4(model_path),

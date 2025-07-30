@@ -60,6 +60,7 @@ class Streamer:
                     "index":(i),
                     "bbox" : (x0,y0,x1,y1),
                     "pad"  : (0,0,0,0),
+                    "overlap": (overlap),
                     "core_box": (x0+context,y0+context,x1+context,y1+context),
                     "tiles" : (temp_tiles),
                 }
@@ -134,7 +135,6 @@ class Streamer:
         # remove axis
         ax.axis("off")
         ax.set_aspect("equal")
-        self._build_1_chunks(0,16)
 
         for tile in self._tiles:
             x0, y0, x1, y1 = tile["bbox"]
@@ -162,6 +162,13 @@ class Streamer:
         plt.show()
         plt.close(fig)
 
+    def preview_one_chunk(self):
+        if not self.chunks:
+            self.preview()
+        else:
+            "Faire le traitement pour in self chunks preview pour chaque tiles "
+            for chunks in self.chunks:
+                "ça marche pas parce qu'on veut le faire sur tile in self.chunks[""tiles""] et pas self.tiles"
 
 class ImageStreamer(Streamer):
     def __init__(self, config: StreamerConfig):
@@ -264,6 +271,21 @@ class ImageStreamer(Streamer):
             tile_index += 1
         return tile_index
 
+
+
+
+
+class WSIStreamer(Streamer):
+    def __init__(self, config: StreamerConfig):
+        super().__init__(config)
+
+    def set_data(self, data: np.ndarray):
+        assert isinstance(data, np.ndarray), "Image must be a numpy array"
+        assert data.ndim == 2, "Image must be a 2D array (grayscale)"
+        assert data.dtype == np.float32, "Image must be of type float32"
+        self._data = data
+        self._shape = data.shape
+        self._build_1_chunks(self.config.overlap,self.config.context)
 
 class SlideStreamer(Streamer):
     def __init__(self, config: StreamerConfig):

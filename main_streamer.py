@@ -19,21 +19,21 @@ if __name__ == "__main__":
     filters = 32
     model_path = f"/home/valentin-poque-irit/Téléchargements/model_onnx+luca_dapi/model.onnx"
 
-    model = StreamingModel(
-        streamer=ImageStreamer(
-            config=StreamerConfig(
-                tile_size=256, overlap=64, chunk_size=512, n_features=2
-            )
-        ),
-        backend=StardistS4(model_path),
-        postprocessing=SobelMagnitude(),
-    )
-
     image = r"/home/valentin-poque-irit/Téléchargements/model_onnx+luca_dapi/luca_dapi.tif"
     image_np = imread(image).astype(np.float32)[
         0
     ]  # Read the image and convert to float32
     # image_np = rescale_intensity(image_np, in_range=(1, 10), out_range=(0, 1))  # Rescale intensity to [0, 1]
+
+    model = StreamingModel(
+        streamer=ImageStreamer(
+            config=StreamerConfig(
+                tile_size=256, overlap=64, chunk_size=512, n_features=2,context=0,nb_chunks=0,image_size=image_np.shape,
+            )
+        ),
+        backend=StardistS4(model_path),
+        postprocessing=SobelMagnitude(),
+    )
 
     image_np = normalize(
         image_np, pmin=1, pmax=99.8, axis=(0, 1)
