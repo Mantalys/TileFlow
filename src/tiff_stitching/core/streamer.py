@@ -14,10 +14,9 @@ class StreamerConfig(BaseModel):
     overlap: int
     chunk_size: int
     n_features: int
-    nb_chunks: int 
+    nb_chunks: int
     context: int
     image_size: tuple
-
 
 
 class Streamer:
@@ -31,56 +30,56 @@ class Streamer:
         self.half_overlap = config.overlap // 2
         self._tiles = []
         self.chunks = []
-        self.nb_chunks=config.nb_chunks
+        self.nb_chunks = config.nb_chunks
         self._data = None
         self._reconstructed = None
         self._shape = None
-        self.context=config.context
-    
-    def _build_1_chunks(self,overlap : int, context : int):
-        chunks_size=self.config.chunk_size
-        self.chunks=[]
-        h,w=self.config.image_size[-2:]
-        x0,y0,x1,y1=0,0,0,0
-        print(y1)
-        for i in range(0,self.config.nb_chunks):
-            if (i==0):#cas particulier car en (0,0) on fait pas l'overlap
-                x1 += 512+context
-                y1 += 512+context
-            else :
-                x1 += 512+context
-                y1 += 512+context
-                x0 += 512+context
-                y0 += 512+context
+        self.context = config.context
 
-            temp_tiles=self._get_tiles_coord(x0,y0,x1,y1)
-            
+    def _build_1_chunks(self, overlap: int, context: int):
+        chunks_size = self.config.chunk_size
+        self.chunks = []
+        h, w = self.config.image_size[-2:]
+        x0, y0, x1, y1 = 0, 0, 0, 0
+        print(y1)
+        for i in range(0, self.config.nb_chunks):
+            if i == 0:  # cas particulier car en (0,0) on fait pas l'overlap
+                x1 += 512 + context
+                y1 += 512 + context
+            else:
+                x1 += 512 + context
+                y1 += 512 + context
+                x0 += 512 + context
+                y0 += 512 + context
+
+            temp_tiles = self._get_tiles_coord(x0, y0, x1, y1)
+
             self.chunks.append(
                 {
-                    "index":(i),
-                    "bbox" : (x0,y0,x1,y1),
-                    "pad"  : (0,0,0,0),
+                    "index": (i),
+                    "bbox": (x0, y0, x1, y1),
+                    "pad": (0, 0, 0, 0),
                     "overlap": (overlap),
-                    "core_box": (x0+context,y0+context,x1+context,y1+context),
-                    "tiles" : (temp_tiles),
+                    "core_box": (
+                        x0 + context,
+                        y0 + context,
+                        x1 + context,
+                        y1 + context,
+                    ),
+                    "tiles": (temp_tiles),
                 }
             )
-            
 
-
-    def _get_tiles_coord(self,x_0 : int, x_1 :int, y_0 : int , y_1 : int):
-        tiles_coord=[]
+    def _get_tiles_coord(self, x_0: int, x_1: int, y_0: int, y_1: int):
+        tiles_coord = []
         for tile in self._tiles:
-            tile_x0,tile_y0,tile_x1,tile_y1=tile["core_bbox"]
-            #if ((tile_x0 > x_0) and (tile_x0 < x_1) and (tile_x1 >x_0) and (tile_x1<x_1) and (tile_y0 > y_0) and (tile_y0<y_1) and (tile_y1>y_0) and (tile_y1<y_1)):
-            if not(    tile_x1 <= x_0 or tile_x0 >= x_1 or tile_y1 <= y_0 or tile_y0 >= y_1):
+            tile_x0, tile_y0, tile_x1, tile_y1 = tile["core_bbox"]
+            # if ((tile_x0 > x_0) and (tile_x0 < x_1) and (tile_x1 >x_0) and (tile_x1<x_1) and (tile_y0 > y_0) and (tile_y0<y_1) and (tile_y1>y_0) and (tile_y1<y_1)):
+            if not (
+                tile_x1 <= x_0 or tile_x0 >= x_1 or tile_y1 <= y_0 or tile_y0 >= y_1
+            ):
                 tiles_coord.append(tile)
         return tiles_coord
-
-        
-
-
-    
 
     def _build_tiles(self):
         self._tiles = []
@@ -128,6 +127,7 @@ class Streamer:
         """
         import matplotlib.pyplot as plt
         from matplotlib.patches import Rectangle
+
         if self._data is None:
             raise ValueError("No data set. Please set data before previewing.")
         fig, ax = plt.subplots()
@@ -168,7 +168,8 @@ class Streamer:
         else:
             "Faire le traitement pour in self chunks preview pour chaque tiles "
             for chunks in self.chunks:
-                "ça marche pas parce qu'on veut le faire sur tile in self.chunks[""tiles""] et pas self.tiles"
+                "ça marche pas parce qu'on veut le faire sur tile in self.chunks[tiles] et pas self.tiles"
+
 
 class ImageStreamer(Streamer):
     def __init__(self, config: StreamerConfig):
@@ -272,9 +273,6 @@ class ImageStreamer(Streamer):
         return tile_index
 
 
-
-
-
 class WSIStreamer(Streamer):
     def __init__(self, config: StreamerConfig):
         super().__init__(config)
@@ -285,7 +283,8 @@ class WSIStreamer(Streamer):
         assert data.dtype == np.float32, "Image must be of type float32"
         self._data = data
         self._shape = data.shape
-        self._build_1_chunks(self.config.overlap,self.config.context)
+        self._build_1_chunks(self.config.overlap, self.config.context)
+
 
 class SlideStreamer(Streamer):
     def __init__(self, config: StreamerConfig):

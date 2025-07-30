@@ -7,7 +7,6 @@ from skimage.morphology import disk
 import onnxruntime as rt
 
 
-
 MORPH_DISK_KERNEL = disk(1)
 
 
@@ -83,7 +82,9 @@ class SobelMagnitude:
 
     def postprocess(self, features):
         probability = features[0]  # Assuming the first feature is the probability map
-        magnitude = features[1]  # Assuming the second feature is the magnitude of gradients
+        magnitude = features[
+            1
+        ]  # Assuming the second feature is the magnitude of gradients
 
         probability[probability < 0.1] = 0
         probability = rescale_intensity(probability, out_range=(0, 1))

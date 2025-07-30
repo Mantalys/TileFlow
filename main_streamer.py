@@ -17,9 +17,13 @@ import time
 if __name__ == "__main__":
     rays = 4
     filters = 32
-    model_path = f"/home/valentin-poque-irit/Téléchargements/model_onnx+luca_dapi/model.onnx"
+    model_path = (
+        f"/home/valentin-poque-irit/Téléchargements/model_onnx+luca_dapi/model.onnx"
+    )
 
-    image = r"/home/valentin-poque-irit/Téléchargements/model_onnx+luca_dapi/luca_dapi.tif"
+    image = (
+        r"/home/valentin-poque-irit/Téléchargements/model_onnx+luca_dapi/luca_dapi.tif"
+    )
     image_np = imread(image).astype(np.float32)[
         0
     ]  # Read the image and convert to float32
@@ -28,7 +32,13 @@ if __name__ == "__main__":
     model = StreamingModel(
         streamer=ImageStreamer(
             config=StreamerConfig(
-                tile_size=256, overlap=64, chunk_size=512, n_features=2,context=0,nb_chunks=0,image_size=image_np.shape,
+                tile_size=256,
+                overlap=64,
+                chunk_size=512,
+                n_features=2,
+                context=0,
+                nb_chunks=0,
+                image_size=image_np.shape,
             )
         ),
         backend=StardistS4(model_path),
