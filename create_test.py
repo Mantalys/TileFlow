@@ -34,7 +34,7 @@ if __name__ == "__main__":
         streamer=ImageStreamer(
             config=StreamerConfig(
                 tile_size=128,
-                overlap=16,
+                overlap=8,
                 chunk_size=512,
                 n_features=2,
                 context=0,
@@ -56,18 +56,18 @@ if __name__ == "__main__":
     chunk_1 = Chunk(
         x_start=0,
         y_start=0,
-        x_end=h_chunk,
-        y_end=w_chunk + (tile_size * overlap_chunk),
+        y_end=h_chunk,
+        x_end=w_chunk + (tile_size * overlap_chunk),
     )
     chunk_2 = Chunk(
-        x_start=0,
-        y_start=w_chunk - (tile_size * overlap_chunk),
-        x_end=h_chunk,
-        y_end=w_chunk + (tile_size * overlap_chunk),
+        y_start=0,
+        x_start=w_chunk - (tile_size * overlap_chunk),
+        y_end=h_chunk,
+        x_end=w_chunk + w_chunk,
     )
 
-    print(chunk_1)
-    print(chunk_2)
+    print(chunk_1,chunk_1.height,chunk_1.width)
+    print(chunk_2,chunk_2.height,chunk_2.width)
 
     image_np = normalize(
         image_np, pmin=1, pmax=99.8, axis=(0, 1)
@@ -81,11 +81,13 @@ if __name__ == "__main__":
     print(nb_cell)
 
     chunk_1_np = chunk_1.chunk_image(image_np)
+    print(chunk_1_np.shape)
     # model.streamer.preview()
     output_chunk_1 = model.stream(chunk_1_np.copy())
     print(len(np.unique(output_chunk_1)) - 1)
 
     chunk_2_np = chunk_2.chunk_image(image_np)
+    print(chunk_2_np.shape)
     # model.streamer.preview()
     output_chunk_2 = model.stream(chunk_2_np.copy())
     print(len(np.unique(output_chunk_2)) - 1)
@@ -93,8 +95,8 @@ if __name__ == "__main__":
     cv2.imwrite("complete.png", (image_np * 255).astype(np.uint8))
     cv2.imwrite("chunk1.png", (chunk_1_np * 255).astype(np.uint8))
     cv2.imwrite("chunk2.png", (chunk_2_np * 255).astype(np.uint8))
-    output = cv2.applyColorMap(output.astype(np.uint8), cv2.COLORMAP_VIRIDIS)
-    cv2.imwrite("output.png", output)
+    output_viridis = cv2.applyColorMap(output.astype(np.uint8), cv2.COLORMAP_VIRIDIS)
+    cv2.imwrite("output.png", output_viridis)
 
     image_full = stitching(
         chunk_1=output_chunk_1,
@@ -105,6 +107,20 @@ if __name__ == "__main__":
         chunk_size=0,
         tile_size=tile_size,
     )
+
+
+    bin_reconstructed = image_full.copy()
+    bin_reconstructed[bin_reconstructed != 0] = 1
+    
+    bin_output = output.copy()
+    bin_output[output != 0] = 1
+
+    diff = bin_reconstructed - bin_output
+
+    plt.figure()
+    plt.imshow(diff, cmap="viridis")
+    plt.show()
+
     assert image_full.shape == image_np.shape, (
         f"Shape missmatch, exepted {image_np.shape}, shape obtenu {image_full.shape}"
     )

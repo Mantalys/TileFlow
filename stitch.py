@@ -25,7 +25,7 @@ class Chunk(BaseModel):
         return self.y_end - self.y_start
 
     def chunk_image(self, image) -> np.array:
-        return image[self.x_start : self.x_end, self.y_start : self.y_end]
+        return image[self.y_start : self.y_end, self.x_start : self.x_end]
 
     def get_valid_xmax(self, overlap: int) -> int:
         """
@@ -82,7 +82,7 @@ def stitching(
         polygon, centroid = process_mask(
             chunk_1,
             label,
-            smooth=1,
+            smooth=0,
             convex_hull=False,
             offset=np.array([0, 0]),
             x_offset=0,
@@ -113,7 +113,7 @@ def stitching(
         polygon, centroid = process_mask(
             chunk_2_relabel,
             label,
-            smooth=1,
+            smooth=0,
             convex_hull=False,
             offset=np.array([0, 0]),
             x_offset=0,
@@ -123,10 +123,10 @@ def stitching(
         if centroid is None:
             continue
         x, y = centroid
-        x = (
-            x + coord_chunk_1.width - overlap_cols
-        )  # Ajustement de l'offset pour chunk_2
-        if x >= chunk_2_valid_x:  # centroïde dans la zone non-overlap de chunk_2
+        #x = (
+           # x + coord_chunk_1.width - overlap_cols
+        #)  # Ajustement de l'offset pour chunk_2
+        if x >= 128:  # centroïde dans la zone non-overlap de chunk_2
             chunk_2_data.polygons.append(polygon)
             chunk_2_data.centroids.append(centroid)
             chunk_2_data.valid_labels.add(label)
@@ -137,7 +137,7 @@ def stitching(
     print(
         f"Reconstruction dimensions: height={coord_chunk_1.height}, width={coord_chunk_1.width + coord_chunk_2.width - overlap_cols * 2}"
     )
-    reconstructed = np.zeros((1400, 1868), dtype=np.uint16)
+    reconstructed = np.zeros((coord_chunk_1.height, coord_chunk_1.width + coord_chunk_2.width - overlap_cols * 2), dtype=np.uint16)
     draw_polygons_in_mask(
         reconstructed, chunk_1_data.polygons, list(chunk_1_data.valid_labels)
     )
@@ -145,7 +145,7 @@ def stitching(
         reconstructed,
         chunk_2_data.polygons,
         list(chunk_2_data.valid_labels),
-        x_offset=coord_chunk_1.width - overlap_cols,
+        x_offset=coord_chunk_1.width - overlap_cols*2,
     )
 
     reconstructed = randomize_labels(reconstructed)
@@ -183,9 +183,11 @@ def process_mask(
 ):
     mask = np.zeros(src.shape, dtype=np.uint8)
     mask[src == label] = 255
-    kernel = disk(smooth)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+
+    if smooth:
+        kernel = disk(smooth)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     contour = contours[0]
     if convex_hull:
