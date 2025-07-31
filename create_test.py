@@ -5,13 +5,19 @@ import numpy as np
 from src.tiff_stitching.core.streamer import ImageStreamer, StreamerConfig
 from src.tiff_stitching.core.model import StreamingModel, SobelMagnitude, StardistS4
 from csbdeep.utils import normalize
-from stitch import stitching
+from stitch import stitching, Chunk
 import matplotlib.pyplot as plt
 import time
 import cv2
+
 # magenta : 237 26 253
 # yellow : 255 192 0
 # cyan : 124 212 226
+
+
+
+
+
 
 if __name__ == "__main__":
     rays = 4
@@ -51,13 +57,20 @@ if __name__ == "__main__":
     tile_size = 128
     overlap_chunk = 1
 
-    chunk_1 = (0, 0, h_chunk, w_chunk + (tile_size * overlap_chunk))
-    chunk_2 = (
-        0,
-        w_chunk - (tile_size * overlap_chunk),
-        h_chunk,
-        w_chunk + (tile_size * overlap_chunk),
+
+    chunk_1 = Chunk(
+        x_start=0,
+        y_start=0,
+        x_end=h_chunk,
+        y_end=w_chunk + (tile_size * overlap_chunk),
     )
+    chunk_2 = Chunk(
+        x_start=0,
+        y_start=w_chunk - (tile_size * overlap_chunk),
+        x_end=h_chunk,
+        y_end=w_chunk + (tile_size * overlap_chunk),
+    )
+    
     print(chunk_1)
     print(chunk_2)
 
@@ -72,12 +85,12 @@ if __name__ == "__main__":
     nb_cell = len(np.unique(output)) - 1
     print(nb_cell)
 
-    chunk_1_np = image_np[chunk_1[0] : chunk_1[2], chunk_1[1] : chunk_1[3]]
+    chunk_1_np = chunk_1.chunk_image(image_np)
     # model.streamer.preview()
     output_chunk_1 = model.stream(chunk_1_np.copy())
     print(len(np.unique(output_chunk_1)) - 1)
 
-    chunk_2_np = image_np[chunk_2[0] : chunk_2[2], chunk_2[1] : chunk_2[3] + chunk_2[1]]
+    chunk_2_np = chunk_2.chunk_image(image_np)
     # model.streamer.preview()
     output_chunk_2 = model.stream(chunk_2_np.copy())
     print(len(np.unique(output_chunk_2)) - 1)
