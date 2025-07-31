@@ -19,32 +19,31 @@ class Chunk(BaseModel):
     @property
     def width(self) -> int:
         return self.x_end - self.x_start
-    
+
     @property
     def height(self) -> int:
         return self.y_end - self.y_start
-    
+
     def chunk_image(self, image) -> np.array:
-        return image[self.x_start:self.x_end, self.y_start:self.y_end]
-    
+        return image[self.x_start : self.x_end, self.y_start : self.y_end]
+
     def get_valid_xmax(self, overlap: int) -> int:
         """
         Returns the valid x coordinate for the chunk, considering the overlap.
         """
         return self.x_start + self.width - overlap
-    
+
     def get_valid_xmin(self, overlap: int) -> int:
         """
         Returns the valid x coordinate for the chunk, considering the overlap.
         """
         return self.x_start + overlap
-    
+
 
 class ChunkData(BaseModel):
     polygons: list
     centroids: list
     valid_labels: set
-
 
 
 def stitching(
@@ -56,8 +55,6 @@ def stitching(
     chunk_size: int,
     tile_size: int,
 ) -> np.array:
-    
-
     # y10, x10, y11, x11 = coord_chunk_1
     # y20, x20, y21, x21 = coord_chunk_2
     # h1, w1 = chunk_1.shape
@@ -69,7 +66,6 @@ def stitching(
 
     chunk_2_valid_x = coord_chunk_2.get_valid_xmin(overlap_cols)
     print(f"Valid x for chunk 2: {chunk_2_valid_x}")
-
 
     # Étendre les chunks temporairement pour récupérer les polygones complets
     # chunk_1_ext = np.concatenate((chunk_1, chunk_2[:, :overlap_cols]), axis=1)
@@ -83,9 +79,16 @@ def stitching(
     for label in unique_labels1:
         if label == 0:
             continue
-        polygon, centroid = process_mask(chunk_1, label, smooth=1, convex_hull=False,
-                                      offset=np.array([0, 0]), x_offset=0, y_offset=0,
-                                      return_centroid=True)
+        polygon, centroid = process_mask(
+            chunk_1,
+            label,
+            smooth=1,
+            convex_hull=False,
+            offset=np.array([0, 0]),
+            x_offset=0,
+            y_offset=0,
+            return_centroid=True,
+        )
         if centroid is None:
             continue
 
@@ -107,13 +110,22 @@ def stitching(
     for label in unique_labels2:
         if label == 0:
             continue
-        polygon, centroid = process_mask(chunk_2_relabel, label, smooth=1, convex_hull=False,
-                                      offset=np.array([0, 0]), x_offset=0, y_offset=0,
-                                      return_centroid=True)
+        polygon, centroid = process_mask(
+            chunk_2_relabel,
+            label,
+            smooth=1,
+            convex_hull=False,
+            offset=np.array([0, 0]),
+            x_offset=0,
+            y_offset=0,
+            return_centroid=True,
+        )
         if centroid is None:
             continue
         x, y = centroid
-        x = x + coord_chunk_1.width - overlap_cols  # Ajustement de l'offset pour chunk_2
+        x = (
+            x + coord_chunk_1.width - overlap_cols
+        )  # Ajustement de l'offset pour chunk_2
         if x >= chunk_2_valid_x:  # centroïde dans la zone non-overlap de chunk_2
             chunk_2_data.polygons.append(polygon)
             chunk_2_data.centroids.append(centroid)
@@ -122,10 +134,19 @@ def stitching(
     # Reconstruction finale (sans overlap doublé)
     # h_full = x21
     # w_full = w1 + w2 - overlap_cols
-    print(f"Reconstruction dimensions: height={coord_chunk_1.height}, width={coord_chunk_1.width + coord_chunk_2.width - overlap_cols * 2}")
+    print(
+        f"Reconstruction dimensions: height={coord_chunk_1.height}, width={coord_chunk_1.width + coord_chunk_2.width - overlap_cols * 2}"
+    )
     reconstructed = np.zeros((1400, 1868), dtype=np.uint16)
-    draw_polygons_in_mask(reconstructed, chunk_1_data.polygons, list(chunk_1_data.valid_labels))
-    draw_polygons_in_mask(reconstructed, chunk_2_data.polygons, list(chunk_2_data.valid_labels), x_offset=coord_chunk_1.width - overlap_cols)
+    draw_polygons_in_mask(
+        reconstructed, chunk_1_data.polygons, list(chunk_1_data.valid_labels)
+    )
+    draw_polygons_in_mask(
+        reconstructed,
+        chunk_2_data.polygons,
+        list(chunk_2_data.valid_labels),
+        x_offset=coord_chunk_1.width - overlap_cols,
+    )
 
     reconstructed = randomize_labels(reconstructed)
     x_line_mid = chunk_1_valid_x
@@ -134,20 +155,21 @@ def stitching(
     x_line_c2_ext = x_line_mid - overlap_cols
     print(x_line_mid, x_line_c1_ext, x_line_c2_ext)
 
-# Tracer une ligne verte verticale sur toute la hauteur de l'image
-# (0, 255, 0) = vert en BGR
+    # Tracer une ligne verte verticale sur toute la hauteur de l'image
+    # (0, 255, 0) = vert en BGR
 
     # Affichage
     plt.figure()
     plt.imshow(reconstructed, cmap="viridis")
-    plt.axvline(x=x_line_c1_ext, color='g', label='c1_extended')
-    plt.axvline(x=x_line_c2_ext, color='g', label='c2_extended')
-    plt.axvline(x=x_line_mid, color='r', label='milieu_image')
+    plt.axvline(x=x_line_c1_ext, color="g", label="c1_extended")
+    plt.axvline(x=x_line_c2_ext, color="g", label="c2_extended")
+    plt.axvline(x=x_line_mid, color="r", label="milieu_image")
 
     plt.title("Image reconstruite")
     plt.show()
 
     return reconstructed
+
 
 def process_mask(
     src,
@@ -209,7 +231,7 @@ def randomize_labels(segmentation):
     return new_segmentation
 
 
-def draw_polygons_in_mask(image, polygons, labels,x_offset=0,y_offset=0):
+def draw_polygons_in_mask(image, polygons, labels, x_offset=0, y_offset=0):
     """
     Dessine des polygones dans `image` avec les `labels` correspondants.
     """

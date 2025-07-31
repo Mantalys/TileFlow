@@ -15,10 +15,6 @@ import cv2
 # cyan : 124 212 226
 
 
-
-
-
-
 if __name__ == "__main__":
     rays = 4
     filters = 32
@@ -57,7 +53,6 @@ if __name__ == "__main__":
     tile_size = 128
     overlap_chunk = 1
 
-
     chunk_1 = Chunk(
         x_start=0,
         y_start=0,
@@ -70,7 +65,7 @@ if __name__ == "__main__":
         x_end=h_chunk,
         y_end=w_chunk + (tile_size * overlap_chunk),
     )
-    
+
     print(chunk_1)
     print(chunk_2)
 
