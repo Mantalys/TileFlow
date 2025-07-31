@@ -15,99 +15,85 @@ def stitching(
     chunk_size: int,
     tile_size: int,
 ) -> np.array:
-    plt.figure()
-    plt.subplot(1, 2, 1)
-    plt.imshow(chunk_1, cmap="viridis")
-    plt.subplot(1, 2, 2)
-    plt.imshow(chunk_2, cmap="viridis")
-    plt.show()
-    x10, y10, x11, y11 = coord_chunk_1
-    x20, y20, x21, y21 = coord_chunk_2
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    y10, x10, y11, x11 = coord_chunk_1
+    y20, x20, y21, x21 = coord_chunk_2
     h1, w1 = chunk_1.shape
     h2, w2 = chunk_2.shape
+    overlap_cols = overlap * tile_size
 
+    # Étendre les chunks temporairement pour récupérer les polygones complets
+    chunk_1_ext = np.concatenate((chunk_1, chunk_2[:, :overlap_cols]), axis=1)
+    chunk_2_ext = np.concatenate((chunk_1[:, -overlap_cols:], chunk_2), axis=1)
+
+    # Extraction depuis chunk_1 étendu
     unique_labels1 = np.unique(chunk_1)
-    unique_labels1 = unique_labels1[
-        unique_labels1 != 0
-    ]  # optionnel : ignorer l'arrière-plan
+    unique_labels1 = unique_labels1[unique_labels1 != 0]
 
-    polys1 = []
-    centros1 = []
-    valid_labels_1 = set()
+    polys1, centros1, valid_labels_1 = [], [], set()
     for label in unique_labels1:
-        poly1, centro1 = process_mask(
-            src=chunk_1,
-            label=label,
-            smooth=1,
-            convex_hull=False,
-            offset=np.array([0, 0]),
-            x_offset=0,
-            y_offset=0,
-            return_centroid=True,
-        )
+        poly1, centro1 = process_mask(chunk_1, label, smooth=1, convex_hull=False,
+                                      offset=np.array([0, 0]), x_offset=0, y_offset=0,
+                                      return_centroid=True)
+        if centro1 is None:
+            continue
         x, y = centro1
-        if x < w1 - overlap * tile_size:
+        if x < w1:  # centroïde dans la zone non-overlap de chunk_1
             polys1.append(poly1)
             centros1.append(centro1)
             valid_labels_1.add(label)
-    print(
-        f"nombre de poly dans chunk_1 {len(polys1)}) et nb de centroides : {len(centros1)}"
-    )
 
+    # Recalibrage des labels chunk_2
     max_label_1 = np.max(chunk_1)
+    chunk_2_ext_relabel = np.where(chunk_2 != 0, chunk_2 + max_label_1 + 1, 0)
     chunk_2_relabel = np.where(chunk_2 != 0, chunk_2 + max_label_1 + 1, 0)
-    unique_labels2 = np.unique(chunk_2_relabel)
-    unique_labels2 = unique_labels2[
-        unique_labels2 != 0
-    ]  # optionnel : ignorer l'arrière-plan
 
-    polys2 = []
-    centros2 = []
-    valid_labels_2 = set()
+    unique_labels2 = np.unique(chunk_2_relabel)
+    unique_labels2 = unique_labels2[unique_labels2 != 0]
+
+    polys2, centros2, valid_labels_2 = [], [], set()
     for label in unique_labels2:
-        poly2, centro2 = process_mask(
-            src=chunk_2_relabel,
-            label=label,
-            smooth=1,
-            convex_hull=False,
-            offset=np.array([0, 0]),
-            x_offset=0,
-            y_offset=0,
-            return_centroid=True,
-        )
+        poly2, centro2 = process_mask(chunk_2_ext_relabel, label, smooth=1, convex_hull=False,
+                                      offset=np.array([0, 0]), x_offset=0, y_offset=0,
+                                      return_centroid=True)
         if centro2 is None:
             continue
         x, y = centro2
-        if x + (w1 - overlap * tile_size) > w1:
+        if x >= overlap_cols:  # centroïde dans la zone non-overlap de chunk_2
             polys2.append(poly2)
             centros2.append(centro2)
             valid_labels_2.add(label)
-    print(
-        f"nombre de poly dans chunk_2 {len(polys2)}) et nb de centroides : {len(centros2)}"
-    )
 
-    max_label_1 = np.max(chunk_1)
-    chunk_2_relabel = np.where(chunk_2 != 0, chunk_2 + max_label_1 + 1, 0)
-    image_full = np.zeros((x21, y21 + y20), dtype=np.uint16)
-    image_full[:, : w1 - overlap * tile_size] = chunk_1[:, : w1 - overlap * tile_size]
-    image_full[:, w1 - overlap * tile_size :] = chunk_2_relabel[
-        :, overlap * tile_size :
-    ]
+    # Reconstruction finale (sans overlap doublé)
+    h_full = x21
+    w_full = w1 + w2 - overlap_cols
+    image_full = np.zeros((x21, y20+y21), dtype=np.uint16)
+    draw_polygons_in_mask(image_full,polys1,list(valid_labels_1))
+    draw_polygons_in_mask(image_full,polys2,list(valid_labels_2),x_offset=w1-overlap_cols)
 
-    valid_labels = valid_labels_1.union(valid_labels_2)
-    for label in np.unique(image_full):
-        if label != 0 and label not in valid_labels:
-            image_full[image_full == label] = 0
 
-    # Étape 4 : randomiser seulement les labels restants
     image_full = randomize_labels(image_full)
+    x_line_mid = int((w1-overlap))
+    x_line_c1_ext=int(w1)
+    x_line_c2_ext=int(w1-overlap_cols)
+    print(x_line_mid,x_line_c1_ext,x_line_c2_ext)
 
+# Tracer une ligne verte verticale sur toute la hauteur de l'image
+# (0, 255, 0) = vert en BGR
+
+    # Affichage
     plt.figure()
     plt.imshow(image_full, cmap="viridis")
+    plt.axvline(x = x_line_c1_ext, color = 'g', label = 'c1_extende')    
+    plt.axvline(x = x_line_c2_ext, color = 'g', label = 'c2_extended')    
+    plt.axvline(x = x_line_mid, color = 'r', label = 'milieu_image')  
+
+    plt.title("Image reconstruite")
     plt.show()
 
     return image_full
-
 
 def process_mask(
     src,
@@ -167,3 +153,14 @@ def randomize_labels(segmentation):
         new_segmentation[segmentation == old_label] = new_label
 
     return new_segmentation
+
+
+def draw_polygons_in_mask(image, polygons, labels,x_offset=0,y_offset=0):
+    """
+    Dessine des polygones dans `image` avec les `labels` correspondants.
+    """
+    for poly, label in zip(polygons, labels):
+        pts = np.array(poly, dtype=np.int32)
+        pts[:, 0] += x_offset
+        pts[:, 1] += y_offset
+        cv2.fillPoly(image, [pts], int(label))
