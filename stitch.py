@@ -47,6 +47,14 @@ class ChunkData(BaseModel):
     valid_labels: set
 
 
+def stitching_list(chunk_list_output, chunk_grid, overlap, tile_size):
+    """
+    Stitch multiple chunks together based on their coordinates and overlap.
+    """
+    reconstructed = None
+    return reconstructed
+
+
 def stitching(
     chunk_1: np.array,
     chunk_2: np.array,
