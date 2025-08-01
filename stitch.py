@@ -15,6 +15,7 @@ class Chunk(BaseModel):
     y_start: int
     x_end: int
     y_end: int
+    position: int  #  gives the position of the chunk in the image, 0 for first chunk, 1 for second chunk, etc.
 
     @property
     def width(self) -> int:
