@@ -66,8 +66,8 @@ if __name__ == "__main__":
         x_end=w_chunk + w_chunk,
     )
 
-    print(chunk_1,chunk_1.height,chunk_1.width)
-    print(chunk_2,chunk_2.height,chunk_2.width)
+    print(chunk_1, chunk_1.height, chunk_1.width)
+    print(chunk_2, chunk_2.height, chunk_2.width)
 
     image_np = normalize(
         image_np, pmin=1, pmax=99.8, axis=(0, 1)
@@ -108,10 +108,9 @@ if __name__ == "__main__":
         tile_size=tile_size,
     )
 
-
     bin_reconstructed = image_full.copy()
     bin_reconstructed[bin_reconstructed != 0] = 1
-    
+
     bin_output = output.copy()
     bin_output[output != 0] = 1
 

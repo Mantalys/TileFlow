@@ -124,9 +124,9 @@ def stitching(
         if centroid is None:
             continue
         x, y = centroid
-        #x = (
-           # x + coord_chunk_1.width - overlap_cols
-        #)  # Ajustement de l'offset pour chunk_2
+        # x = (
+        # x + coord_chunk_1.width - overlap_cols
+        # )  # Ajustement de l'offset pour chunk_2
         if x >= 128:  # centroïde dans la zone non-overlap de chunk_2
             chunk_2_data.polygons.append(polygon)
             chunk_2_data.centroids.append(centroid)
@@ -138,7 +138,13 @@ def stitching(
     print(
         f"Reconstruction dimensions: height={coord_chunk_1.height}, width={coord_chunk_1.width + coord_chunk_2.width - overlap_cols * 2}"
     )
-    reconstructed = np.zeros((coord_chunk_1.height, coord_chunk_1.width + coord_chunk_2.width - overlap_cols * 2), dtype=np.uint16)
+    reconstructed = np.zeros(
+        (
+            coord_chunk_1.height,
+            coord_chunk_1.width + coord_chunk_2.width - overlap_cols * 2,
+        ),
+        dtype=np.uint16,
+    )
     draw_polygons_in_mask(
         reconstructed, chunk_1_data.polygons, list(chunk_1_data.valid_labels)
     )
@@ -146,7 +152,7 @@ def stitching(
         reconstructed,
         chunk_2_data.polygons,
         list(chunk_2_data.valid_labels),
-        x_offset=coord_chunk_1.width - overlap_cols*2,
+        x_offset=coord_chunk_1.width - overlap_cols * 2,
     )
 
     reconstructed = randomize_labels(reconstructed)

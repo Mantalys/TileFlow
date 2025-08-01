@@ -53,7 +53,6 @@ if __name__ == "__main__":
     nb_cell = len(np.unique(output)) - 1
     print(nb_cell)
 
-
     ### START THE STITCH TEST
 
     tile_size = 128
@@ -69,20 +68,26 @@ if __name__ == "__main__":
     chunk_list_output = []
     for i in range(n_chunks):
         x_start = i * w_chunk
-        x_end = x_start + w_chunk + (tile_size * overlap_chunk) if i < n_chunks - 1 else w
+        x_end = (
+            x_start + w_chunk + (tile_size * overlap_chunk) if i < n_chunks - 1 else w
+        )
         chunk_infos = Chunk(
-                x_start=x_start,
-                y_start=0,
-                y_end=chunk_height,
-                x_end=x_end,
-                position=i,  # Assigning position based on the loop index
-            )
-        print(f"Chunk {i}: {chunk_infos}, height: {chunk_infos.height}, width: {chunk_infos.width}")
+            x_start=x_start,
+            y_start=0,
+            y_end=chunk_height,
+            x_end=x_end,
+            position=i,  # Assigning position based on the loop index
+        )
+        print(
+            f"Chunk {i}: {chunk_infos}, height: {chunk_infos.height}, width: {chunk_infos.width}"
+        )
         chunk_np = chunk_infos.chunk_image(image_np)
         print(f"Chunk {i} shape: {chunk_np.shape}")
         output_chunk = model.stream(chunk_np.copy())
         print(f"Chunk {i} unique labels: {len(np.unique(output_chunk)) - 1}")
-        chunk_list_output.append((chunk_infos, output_chunk))  # Store chunk info and output
+        chunk_list_output.append(
+            (chunk_infos, output_chunk)
+        )  # Store chunk info and output
 
     cv2.imwrite("complete.png", (image_np * 255).astype(np.uint8))
     for i, (chunk_infos, output_chunk) in enumerate(chunk_list_output):
@@ -100,10 +105,9 @@ if __name__ == "__main__":
         tile_size=tile_size,
     )
 
-
     bin_reconstructed = image_full.copy()
     bin_reconstructed[bin_reconstructed != 0] = 1
-    
+
     bin_output = output.copy()
     bin_output[output != 0] = 1
 
