@@ -135,7 +135,7 @@ def stitching(
         # x = (
         # x + coord_chunk_1.width - overlap_cols
         # )  # Ajustement de l'offset pour chunk_2
-        if x >= 128:  # centroïde dans la zone non-overlap de chunk_2
+        if x >= overlap*tile_size:  # centroïde dans la zone non-overlap de chunk_2
             chunk_2_data.polygons.append(polygon)
             chunk_2_data.centroids.append(centroid)
             chunk_2_data.valid_labels.add(label)

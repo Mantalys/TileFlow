@@ -56,12 +56,14 @@ if __name__ == "__main__":
         y_start=0,
         y_end=h_chunk,
         x_end=w_chunk + (tile_size * overlap_chunk),
+        position=1,
     )
     chunk_2 = Chunk(
         y_start=0,
         x_start=w_chunk - (tile_size * overlap_chunk),
         y_end=h_chunk,
         x_end=w_chunk + w_chunk,
+        position=1,
     )
 
     print(chunk_1, chunk_1.height, chunk_1.width)
