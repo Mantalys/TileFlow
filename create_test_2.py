@@ -26,7 +26,7 @@ if __name__ == "__main__":
         image_np, pmin=1, pmax=99.8, axis=(0, 1)
     )  # Normalize to [0, 1]
     # image_np = rescale_intensity(image_np, in_range=(1, 10), out_range=(0, 1))  # Rescale intensity to [0, 1]
-
+    print(f"image de base : {image_np.shape}")
     model = StreamingModel(
         streamer=ImageStreamer(
             config=StreamerConfig(
@@ -61,7 +61,7 @@ if __name__ == "__main__":
 
     chunk_list_output = []
     for i in range(n_chunks):
-        x_start = i * w_chunk
+        x_start = i * (w_chunk-tile_size*overlap_chunk) if i>0 else 0
         x_end = (
             x_start + w_chunk + (tile_size * overlap_chunk) if i < n_chunks - 1 else w
         )
@@ -98,7 +98,7 @@ if __name__ == "__main__":
         chunk_size=0,
         tile_size=tile_size,
     )
-
+    print(f"image reconstruite : {image_full.shape}")
     bin_reconstructed = image_full.copy()
     bin_reconstructed[bin_reconstructed != 0] = 1
 
