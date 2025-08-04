@@ -5,7 +5,7 @@ import numpy as np
 from src.tiff_stitching.core.streamer import ImageStreamer, StreamerConfig
 from src.tiff_stitching.core.model import StreamingModel, SobelMagnitude, StardistS4
 from csbdeep.utils import normalize
-from stitch import stitching, Chunk
+from stitch import stitching, Chunk,stitching_list
 import matplotlib.pyplot as plt
 import time
 import cv2
@@ -62,7 +62,7 @@ if __name__ == "__main__":
     chunk_list_output = []
     chunk_grid = (1, n_chunks)  # 1 row, n_chunks columns
     for i in range(n_chunks):
-        x_start = i * w_chunk
+        x_start = i * (w_chunk-tile_size*overlap_chunk) if i>0 else 0
         x_end = (
             x_start + w_chunk + (tile_size * overlap_chunk) if i < n_chunks - 1 else w
         )
@@ -83,7 +83,7 @@ if __name__ == "__main__":
         chunk_list_output.append(
             (chunk_infos, output_chunk)
         )  # Store chunk info and output
-
+    print(f"TEST {chunk_list_output[1][0].get_valid_xmax(10)}")
     cv2.imwrite("complete.png", (image_np * 255).astype(np.uint8))
     for i, (chunk_infos, output_chunk) in enumerate(chunk_list_output):
         cv2.imwrite(f"chunk{i + 1}.png", (output_chunk * 255).astype(np.uint8))

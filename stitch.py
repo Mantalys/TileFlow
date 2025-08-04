@@ -51,7 +51,81 @@ def stitching_list(chunk_list_output, chunk_grid, overlap, tile_size):
     """
     Stitch multiple chunks together based on their coordinates and overlap.
     """
-    reconstructed = None
+    line,row=chunk_grid
+    label_max=0
+    height_reconstructed,width_reconstructed=0,0
+    height_reconstructed=chunk_list_output[0][0].height
+    width_reconstructed=(chunk_list_output[0][0].x_end - overlap*tile_size)*(row)
+
+
+    reconstructed = np.zeros(
+                    (
+                        height_reconstructed,
+                        width_reconstructed,
+                    ),
+                    dtype=np.uint16,
+                )
+    for chunk in range (0,row):
+         print(f"Process Chunk {chunk}")
+         unique_labels1 = np.unique(chunk_list_output[chunk][1])
+         chunk_relabel = np.where(chunk_list_output[chunk][1] != 0, chunk_list_output[chunk][1] + label_max, 0)
+         unique_labels2 = np.unique(chunk_relabel)
+         chunk_1_data = ChunkData(polygons=[], centroids=[], valid_labels=set())
+         for label in unique_labels2:
+            if label == 0:
+                continue
+            polygon, centroid = process_mask(
+                chunk_relabel,
+                label,
+                smooth=0,
+                convex_hull=False,
+                offset=np.array([0, 0]),
+                x_offset=chunk_list_output[chunk][0].x_start,
+                y_offset=0,
+                return_centroid=True,
+            )
+            if centroid is None:
+                continue
+
+            x, y = centroid
+
+            if chunk_list_output[chunk][0].position == 0:
+                if x<chunk_list_output[chunk][0].get_valid_xmax(overlap*tile_size):
+                    chunk_1_data.polygons.append(polygon)
+                    chunk_1_data.centroids.append(centroid)
+                    chunk_1_data.valid_labels.add(label)
+                    x_offset=0
+
+            elif chunk_list_output[chunk][0].position == row-1:
+                if x>chunk_list_output[chunk][0].get_valid_xmin(overlap*tile_size):
+                    chunk_1_data.polygons.append(polygon)
+                    chunk_1_data.centroids.append(centroid)
+                    chunk_1_data.valid_labels.add(label)
+                    x_offset=chunk_list_output[chunk][0].x_start + tile_size*overlap
+
+            
+            else :
+                if (x>chunk_list_output[chunk][0].get_valid_xmin(overlap*tile_size)-overlap*tile_size) and x<chunk_list_output[chunk][0].get_valid_xmax(overlap*tile_size):
+                    chunk_1_data.polygons.append(polygon)
+                    chunk_1_data.centroids.append(centroid)
+                    chunk_1_data.valid_labels.add(label)
+                    x_offset=chunk_list_output[chunk][0].x_start + tile_size*overlap
+         label_max = np.max(chunk_relabel)
+
+         print(f"Chunk {chunk} unique labels: {len((chunk_1_data.valid_labels)) - 1}")
+
+
+        # Recalibrage des labels chunk_2
+         draw_polygons_in_mask(
+                reconstructed, chunk_1_data.polygons, list(chunk_1_data.valid_labels),x_offset=x_offset
+            )
+    reconstructed = randomize_labels(reconstructed)
+    plt.figure()
+    plt.imshow(reconstructed, cmap="viridis")
+
+    plt.title("Image reconstruite")
+    plt.show()
+
     return reconstructed
 
 
@@ -110,7 +184,7 @@ def stitching(
     # Recalibrage des labels chunk_2
     max_label_1 = np.max(chunk_1)
     # chunk_2_ext_relabel = np.where(chunk_2 != 0, chunk_2 + max_label_1 + 1, 0)
-    chunk_2_relabel = np.where(chunk_2 != 0, chunk_2 + max_label_1 + 1, 0)
+    chunk_2_relabel = np.where(chunk_2 != 0, chunk_2 + max_label_1, 0)
 
     unique_labels2 = np.unique(chunk_2_relabel)
     # unique_labels2 = unique_labels2[unique_labels2 != 0]
