@@ -58,6 +58,7 @@ def stitching_list(chunk_list_output, chunk_grid, overlap, tile_size):
     height_reconstructed, width_reconstructed = 0, 0
     height_reconstructed = chunk_list_output[0][0].height
     width_reconstructed = (chunk_list_output[0][0].x_end - overlap * tile_size) * (row)
+    total_cells=0
 
     reconstructed = np.zeros(
         (
@@ -74,6 +75,7 @@ def stitching_list(chunk_list_output, chunk_grid, overlap, tile_size):
         )
         unique_labels2 = np.unique(chunk_relabel)
         chunk_1_data = ChunkData(polygons=[], centroids=[], valid_labels=set())
+        offset=0
         for label in unique_labels2:
             if label == 0:
                 continue
@@ -94,46 +96,35 @@ def stitching_list(chunk_list_output, chunk_grid, overlap, tile_size):
             # check if chunk is on the left (no neighbor chunk)
             # could be precomputed
             if chunk_list_output[chunk][0].position == 0:
-                if x < chunk_list_output[chunk][0].get_valid_xmax(overlap * tile_size):
+                offset=0
+                if x <= chunk_list_output[chunk][0].get_valid_xmax(overlap * tile_size):
                     chunk_1_data.polygons.append(polygon)
                     chunk_1_data.centroids.append(centroid)
                     chunk_1_data.valid_labels.add(label)
-                    x_offset = 0
+                    x_offset=0
 
-            # check if chunk is on the right (no neighbor chunk)
-            # could be precomputed
-            elif chunk_list_output[chunk][0].position == row - 1:
-                if x > chunk_list_output[chunk][0].get_valid_xmin(overlap * tile_size):
+            elif chunk_list_output[chunk][0].position == row-1:
+                offset = chunk_list_output[chunk][0].x_start
+                if x>=chunk_list_output[chunk][0].get_valid_xmin(overlap*tile_size):
                     chunk_1_data.polygons.append(polygon)
                     chunk_1_data.centroids.append(centroid)
                     chunk_1_data.valid_labels.add(label)
-                    x_offset = chunk_list_output[chunk][0].x_start + tile_size * overlap
 
-            # check if chunk is in the middle (has neighbor chunks)
-            # could be precomputed
-            else:
-                if (
-                    x
-                    > chunk_list_output[chunk][0].get_valid_xmin(overlap * tile_size)
-                    - overlap * tile_size
-                ) and x < chunk_list_output[chunk][0].get_valid_xmax(
-                    overlap * tile_size
-                ):
+            
+            else :
+                offset = chunk_list_output[chunk][0].x_start
+                if (chunk_list_output[chunk][0].get_valid_xmin(overlap*tile_size)<=x) and x<=chunk_list_output[chunk][0].get_valid_xmax(overlap*tile_size):
                     chunk_1_data.polygons.append(polygon)
                     chunk_1_data.centroids.append(centroid)
                     chunk_1_data.valid_labels.add(label)
-                    x_offset = chunk_list_output[chunk][0].x_start + tile_size * overlap
         label_max = np.max(chunk_relabel)
 
         print(f"Chunk {chunk} unique labels: {len((chunk_1_data.valid_labels)) - 1}")
-
+        total_cells+=len((chunk_1_data.valid_labels)) - 1
+        print(f"Nb labels avant reconstruction : {total_cells}")
         # Recalibrage des labels chunk_2
         draw_polygons_in_mask(
-            reconstructed,
-            chunk_1_data.polygons,
-            list(chunk_1_data.valid_labels),
-            x_offset=x_offset,
-        )
+                reconstructed, chunk_1_data.polygons, list(chunk_1_data.valid_labels),x_offset=offset)
     reconstructed = randomize_labels(reconstructed)
     plt.figure()
     plt.imshow(reconstructed, cmap="viridis")
