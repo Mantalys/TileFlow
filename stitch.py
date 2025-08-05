@@ -17,7 +17,6 @@ class Chunk(BaseModel):
     x_end: int
     y_end: int
     position: int  #  gives the position of the chunk in the image, 0 for first chunk, 1 for second chunk, etc.
-    grid_position: Tuple[int, int]  # (column, row) position in the grid
 
     @property
     def width(self) -> int:
@@ -57,10 +56,11 @@ def stitching_list(chunk_list_output, chunk_grid, overlap, tile_size):
     label_max = 0
     height_reconstructed, width_reconstructed = 0, 0
     height_reconstructed = chunk_list_output[0][0].height
-    width_reconstructed = (chunk_list_output[0][0].x_end - overlap * tile_size) * (row)
+    width_reconstructed = (chunk_list_output[-1][0].x_end)
     total_cells=0
     x_lines=[]
     #x_lines.append(width_reconstructed//2)
+    print(f"reconstru width {width_reconstructed}")
 
     reconstructed = np.zeros(
         (
@@ -69,68 +69,69 @@ def stitching_list(chunk_list_output, chunk_grid, overlap, tile_size):
         ),
         dtype=np.uint16,
     )
-    for chunk in range(0, row):
-        print(f"Process Chunk {chunk}")
-        unique_labels1 = np.unique(chunk_list_output[chunk][1])
-        chunk_relabel = np.where(
-            chunk_list_output[chunk][1] != 0, chunk_list_output[chunk][1] + label_max, 0
-        )
-        unique_labels2 = np.unique(chunk_relabel)
-        chunk_1_data = ChunkData(polygons=[], centroids=[], valid_labels=set())
-        offset=0
-        for label in unique_labels2:
-            if label == 0:
-                continue
-            polygon, centroid = process_mask(
-                chunk_relabel,
-                label,
-                smooth=0,
-                convex_hull=False,
-                offset=np.array([0, 0]),
-                x_offset=chunk_list_output[chunk][0].x_start,
-                y_offset=0,
-                return_centroid=True,
+    for chunk in range(0, len(chunk_list_output)):
+
+            print(f"Process Chunk {chunk}")
+            unique_labels1 = np.unique(chunk_list_output[chunk][1])
+            chunk_relabel = np.where(
+                chunk_list_output[chunk][1] != 0, chunk_list_output[chunk][1] + label_max, 0
             )
-            if centroid is None:
-                continue
+            unique_labels2 = np.unique(chunk_relabel)
+            chunk_1_data = ChunkData(polygons=[], centroids=[], valid_labels=set())
+            offset=0
+            for label in unique_labels2:
+                if label == 0:
+                    continue
+                polygon, centroid = process_mask(
+                    chunk_relabel,
+                    label,
+                    smooth=0,
+                    convex_hull=False,
+                    offset=np.array([0, 0]),
+                    x_offset=chunk_list_output[chunk][0].x_start,
+                    y_offset=0,
+                    return_centroid=True,
+                )
+                if centroid is None:
+                    continue
 
-            x, y = centroid
-            # check if chunk is on the left (no neighbor chunk)
-            # could be precomputed
-            if chunk_list_output[chunk][0].position == 0:
-                offset=0
-                if x <= chunk_list_output[chunk][0].get_valid_xmax(overlap * tile_size):
-                    chunk_1_data.polygons.append(polygon)
-                    chunk_1_data.centroids.append(centroid)
-                    chunk_1_data.valid_labels.add(label)
-                    x_offset=0
+                x, y = centroid
+                # check if chunk is on the left (no neighbor chunk)
+                # could be precomputed
+                if chunk_list_output[chunk][0].position == 0:
+                    offset=0
+                    if x <= chunk_list_output[chunk][0].get_valid_xmax(overlap * tile_size):
+                        chunk_1_data.polygons.append(polygon)
+                        chunk_1_data.centroids.append(centroid)
+                        chunk_1_data.valid_labels.add(label)
+                        x_offset=0
 
-            elif chunk_list_output[chunk][0].position == row-1:
-                offset = chunk_list_output[chunk][0].x_start
-                if x>=chunk_list_output[chunk][0].get_valid_xmin(overlap*tile_size):
-                    chunk_1_data.polygons.append(polygon)
-                    chunk_1_data.centroids.append(centroid)
-                    chunk_1_data.valid_labels.add(label)
+                elif chunk_list_output[chunk][0].position == row-1:
+                    offset = chunk_list_output[chunk][0].x_start
+                    if x>=chunk_list_output[chunk][0].get_valid_xmin(overlap*tile_size):
+                        chunk_1_data.polygons.append(polygon)
+                        chunk_1_data.centroids.append(centroid)
+                        chunk_1_data.valid_labels.add(label)
 
-            
-            else :
-                offset = chunk_list_output[chunk][0].x_start
-                if (chunk_list_output[chunk][0].get_valid_xmin(overlap*tile_size)<=x) and x<=chunk_list_output[chunk][0].get_valid_xmax(overlap*tile_size):
-                    chunk_1_data.polygons.append(polygon)
-                    chunk_1_data.centroids.append(centroid)
-                    chunk_1_data.valid_labels.add(label)
-        label_max = np.max(chunk_relabel)
+                
+                else :
+                    offset = chunk_list_output[chunk][0].x_start
+                    if (chunk_list_output[chunk][0].get_valid_xmin(overlap*tile_size)<=x) and x<=chunk_list_output[chunk][0].get_valid_xmax(overlap*tile_size):
+                        chunk_1_data.polygons.append(polygon)
+                        chunk_1_data.centroids.append(centroid)
+                        chunk_1_data.valid_labels.add(label)
+            label_max = np.max(chunk_relabel)
 
-        print(f"Chunk {chunk} unique labels: {len((chunk_1_data.valid_labels)) - 1}")
-        total_cells+=len((chunk_1_data.valid_labels)) - 1
-        print(f"Nb labels avant reconstruction : {total_cells}")
-        # Recalibrage des labels chunk_2
-        draw_polygons_in_mask(
-                reconstructed, chunk_1_data.polygons, list(chunk_1_data.valid_labels),x_offset=offset)
-        if chunk != len(chunk_list_output)-1:
-            x_lines.append((chunk,chunk_list_output[chunk][0].x_start,chunk_list_output[chunk][0].x_end))
-        else:
-            x_lines.append((chunk,chunk_list_output[chunk][0].x_start,chunk_list_output[chunk][0].get_valid_xmax(overlap*tile_size)+overlap*tile_size-1))#-1 is just for plot if we don't do this the figure would be enlarge and there would be an empty area
+            print(f"Chunk {chunk} unique labels: {len((chunk_1_data.valid_labels)) - 1}")
+            total_cells+=len((chunk_1_data.valid_labels)) - 1
+            print(f"Nb labels avant reconstruction : {total_cells}")
+            # Recalibrage des labels chunk_2
+            draw_polygons_in_mask(
+                    reconstructed, chunk_1_data.polygons, list(chunk_1_data.valid_labels),x_offset=offset)
+            if chunk != len(chunk_list_output)-1:
+                x_lines.append((chunk,chunk_list_output[chunk][0].x_start,chunk_list_output[chunk][0].x_end))
+            else:
+                x_lines.append((chunk,chunk_list_output[chunk][0].x_start,chunk_list_output[chunk][0].get_valid_xmax(overlap*tile_size)+overlap*tile_size-1))#-1 is just for plot if we don't do this the figure would be enlarge and there would be an empty area
 
     reconstructed = randomize_labels(reconstructed)
     plt.figure()
@@ -138,11 +139,13 @@ def stitching_list(chunk_list_output, chunk_grid, overlap, tile_size):
     for i,start,end in x_lines:
         if i==len(x_lines)-1:
             plt.axvline(x=start, color="g")#début chunk en vert
-            plt.axvline(x=end, color="r")#début chunk en rouge
+            plt.text(start + 5, 10, f"Début Chunk {i}", color="g", rotation=90, va='bottom', fontsize=8)
+            plt.axvline(x=end, color="r",label=f"Chunk_{i}_end")#fin chunk en rouge
+            plt.text(end + 5, 10, f"Fin Chunk {i+1}", color="r", rotation=90, va='bottom', fontsize=8)
         else:
-            plt.axvline(x=start, color="g")#début chunk en vert
-            plt.axvline(x=end, color="r")#début chunk en rouge
-        
+            plt.axvline(x=start, color="g",label=f"Chunk_{i}_start")#début chunk en vert
+            plt.axvline(x=end, color="r",label=f"Chunk_{i}_end")#fin chunk en rouge
+    plt.axis("on")
     plt.title("Image reconstruite")
     plt.show()
 

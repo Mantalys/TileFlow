@@ -72,7 +72,6 @@ if __name__ == "__main__":
             y_end=chunk_height,
             x_end=x_end,
             position=i,  # Assigning position based on the loop index
-            grid_position=(1,i)
         )
         print(
             f"Chunk {i}: {chunk_infos}, height: {chunk_infos.height}, width: {chunk_infos.width}"
@@ -84,13 +83,14 @@ if __name__ == "__main__":
         chunk_list_output.append(
             (chunk_infos, output_chunk)
         )  # Store chunk info and output
-    print(f"TEST {chunk_list_output[1][0].get_valid_xmax(10)}")
+#    print(f"TEST {chunk_list_output[1][0].get_valid_xmax(10)}")
     cv2.imwrite("complete.png", (image_np * 255).astype(np.uint8))
     for i, (chunk_infos, output_chunk) in enumerate(chunk_list_output):
         cv2.imwrite(f"chunk{i + 1}.png", (output_chunk * 255).astype(np.uint8))
     output_viridis = cv2.applyColorMap(output.astype(np.uint8), cv2.COLORMAP_VIRIDIS)
     cv2.imwrite("output.png", output_viridis)
-
+    #del chunk_list_output[0]
+    #del chunk_list_output[1]
     image_full = stitching_list(
         chunk_list_output,
         chunk_grid=chunk_grid,
