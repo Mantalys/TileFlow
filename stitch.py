@@ -59,6 +59,8 @@ def stitching_list(chunk_list_output, chunk_grid, overlap, tile_size):
     height_reconstructed = chunk_list_output[0][0].height
     width_reconstructed = (chunk_list_output[0][0].x_end - overlap * tile_size) * (row)
     total_cells=0
+    x_lines=[]
+    #x_lines.append(width_reconstructed//2)
 
     reconstructed = np.zeros(
         (
@@ -125,10 +127,22 @@ def stitching_list(chunk_list_output, chunk_grid, overlap, tile_size):
         # Recalibrage des labels chunk_2
         draw_polygons_in_mask(
                 reconstructed, chunk_1_data.polygons, list(chunk_1_data.valid_labels),x_offset=offset)
+        if chunk != len(chunk_list_output)-1:
+            x_lines.append((chunk,chunk_list_output[chunk][0].x_start,chunk_list_output[chunk][0].x_end))
+        else:
+            x_lines.append((chunk,chunk_list_output[chunk][0].x_start,chunk_list_output[chunk][0].get_valid_xmax(overlap*tile_size)+overlap*tile_size-1))#-1 is just for plot if we don't do this the figure would be enlarge and there would be an empty area
+
     reconstructed = randomize_labels(reconstructed)
     plt.figure()
     plt.imshow(reconstructed, cmap="viridis")
-
+    for i,start,end in x_lines:
+        if i==len(x_lines)-1:
+            plt.axvline(x=start, color="g")#début chunk en vert
+            plt.axvline(x=end, color="r")#début chunk en rouge
+        else:
+            plt.axvline(x=start, color="g")#début chunk en vert
+            plt.axvline(x=end, color="r")#début chunk en rouge
+        
     plt.title("Image reconstruite")
     plt.show()
 
