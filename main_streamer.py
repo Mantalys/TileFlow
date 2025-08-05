@@ -32,7 +32,7 @@ if __name__ == "__main__":
     model = StreamingModel(
         streamer=ImageStreamer(
             config=StreamerConfig(
-                tile_size=256,
+                tile_size=600,
                 overlap=64,
                 chunk_size=512,
                 n_features=2,

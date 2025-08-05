@@ -31,7 +31,8 @@ if __name__ == "__main__":
     model = StreamingModel(
         streamer=ImageStreamer(
             config=StreamerConfig(
-                tile_size=128,
+                tile_size=200
+                ,
                 overlap=8,
                 chunk_size=512,
                 n_features=2,
