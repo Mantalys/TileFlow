@@ -72,6 +72,7 @@ if __name__ == "__main__":
             y_end=chunk_height,
             x_end=x_end,
             position=i,  # Assigning position based on the loop index
+            grid_position=(1,i)
         )
         print(
             f"Chunk {i}: {chunk_infos}, height: {chunk_infos.height}, width: {chunk_infos.width}"
