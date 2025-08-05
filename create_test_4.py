@@ -56,7 +56,16 @@ if __name__ == "__main__":
     # Now, we build an automatic splitting of the image into n_chunks, but still horizontal
     # This is a test to see if the stitching works correctly
     h, w = image_np.shape
-    chunk_grid = (1, 4)  # 1 row, n_chunks columns
+    chunk_size = 512  # Size of each chunk
+    half_chunk_size = chunk_size // 2
+    # compute the number of chunks based on the image size and chunk size, as a 2D grid.
+    # Eg. if the image is 1024x2048 and chunk size is 512, we will have 2 chunks in height and 4 in width.
+    # But if the image size is not a multiple of the chunk size, we will have an additional chunk for the remaining pixels.
+    # If the remaining pixels are less than the overlap, we will not create a chunk for them, and will add it to the last chunk.
+    chunk_grid = (h // chunk_size + (1 if h % chunk_size > half_chunk_size else 0),
+                  w // chunk_size + (1 if w % chunk_size > half_chunk_size else 0))
+    print(f"Number of chunks: {chunk_grid}")
+
     h_chunk = h // chunk_grid[0]  # Width of each chunk based on the number of chunks
     w_chunk = w // chunk_grid[1]
 
