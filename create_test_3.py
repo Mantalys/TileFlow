@@ -71,7 +71,7 @@ if __name__ == "__main__":
             y_start=0,
             y_end=chunk_height,
             x_end=x_end,
-            position=i,  # Assigning position based on the loop index
+            position=(1,i),  # Assigning position based on the loop index
         )
         print(
             f"Chunk {i}: {chunk_infos}, height: {chunk_infos.height}, width: {chunk_infos.width}"
@@ -94,7 +94,7 @@ if __name__ == "__main__":
     image_full = stitching_list(
         chunk_list_output,
         chunk_grid=chunk_grid,
-        overlap=overlap_chunk,
+        overlap=overlap_chunk*tile_size,
         tile_size=tile_size,
     )
 

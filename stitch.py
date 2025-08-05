@@ -16,7 +16,7 @@ class Chunk(BaseModel):
     y_start: int
     x_end: int
     y_end: int
-    position: int  #  gives the position of the chunk in the image, 0 for first chunk, 1 for second chunk, etc.
+    position: Tuple [int,int]  #  gives the position of the chunk in the image, 0 for first chunk, 1 for second chunk, etc.
 
     @property
     def width(self) -> int:
@@ -48,11 +48,11 @@ class ChunkData(BaseModel):
     valid_labels: set
 
 
-def stitching_list(chunk_list_output, chunk_grid, overlap, tile_size):
+def stitching_list(chunk_list_output, chunk_grid, overlap, tile_size=0):
     """
     Stitch multiple chunks together based on their coordinates and overlap.
     """
-    line, row = chunk_grid
+    row_max, col_max = chunk_grid
     label_max = 0
     height_reconstructed, width_reconstructed = 0, 0
     height_reconstructed = chunk_list_output[0][0].height
@@ -70,7 +70,7 @@ def stitching_list(chunk_list_output, chunk_grid, overlap, tile_size):
         dtype=np.uint16,
     )
     for chunk in range(0, len(chunk_list_output)):
-
+            row, col = chunk_list_output[chunk][0].position
             print(f"Process Chunk {chunk}")
             unique_labels1 = np.unique(chunk_list_output[chunk][1])
             chunk_relabel = np.where(
@@ -98,17 +98,17 @@ def stitching_list(chunk_list_output, chunk_grid, overlap, tile_size):
                 x, y = centroid
                 # check if chunk is on the left (no neighbor chunk)
                 # could be precomputed
-                if chunk_list_output[chunk][0].position == 0:
+                if col == 0:
                     offset=0
-                    if x <= chunk_list_output[chunk][0].get_valid_xmax(overlap * tile_size):
+                    if x <= chunk_list_output[chunk][0].get_valid_xmax(overlap):
                         chunk_1_data.polygons.append(polygon)
                         chunk_1_data.centroids.append(centroid)
                         chunk_1_data.valid_labels.add(label)
                         x_offset=0
 
-                elif chunk_list_output[chunk][0].position == row-1:
+                elif col == col_max-1:
                     offset = chunk_list_output[chunk][0].x_start
-                    if x>=chunk_list_output[chunk][0].get_valid_xmin(overlap*tile_size):
+                    if x>=chunk_list_output[chunk][0].get_valid_xmin(overlap):
                         chunk_1_data.polygons.append(polygon)
                         chunk_1_data.centroids.append(centroid)
                         chunk_1_data.valid_labels.add(label)
@@ -116,7 +116,7 @@ def stitching_list(chunk_list_output, chunk_grid, overlap, tile_size):
                 
                 else :
                     offset = chunk_list_output[chunk][0].x_start
-                    if (chunk_list_output[chunk][0].get_valid_xmin(overlap*tile_size)<=x) and x<=chunk_list_output[chunk][0].get_valid_xmax(overlap*tile_size):
+                    if (chunk_list_output[chunk][0].get_valid_xmin(overlap)<=x) and x<=chunk_list_output[chunk][0].get_valid_xmax(overlap):
                         chunk_1_data.polygons.append(polygon)
                         chunk_1_data.centroids.append(centroid)
                         chunk_1_data.valid_labels.add(label)
@@ -131,7 +131,7 @@ def stitching_list(chunk_list_output, chunk_grid, overlap, tile_size):
             if chunk != len(chunk_list_output)-1:
                 x_lines.append((chunk,chunk_list_output[chunk][0].x_start,chunk_list_output[chunk][0].x_end))
             else:
-                x_lines.append((chunk,chunk_list_output[chunk][0].x_start,chunk_list_output[chunk][0].get_valid_xmax(overlap*tile_size)+overlap*tile_size-1))#-1 is just for plot if we don't do this the figure would be enlarge and there would be an empty area
+                x_lines.append((chunk,chunk_list_output[chunk][0].x_start,chunk_list_output[chunk][0].get_valid_xmax(overlap)+overlap-1))#-1 is just for plot if we don't do this the figure would be enlarge and there would be an empty area
 
     reconstructed = randomize_labels(reconstructed)
     plt.figure()
@@ -165,9 +165,9 @@ def stitching(
     # y20, x20, y21, x21 = coord_chunk_2
     # h1, w1 = chunk_1.shape
     # h2, w2 = chunk_2.shape
-    overlap_cols = overlap * tile_size
+    overlap_cols = overlap
 
-    chunk_1_valid_x = coord_chunk_1.get_valid_xmax(overlap_cols)
+    chunk_1_valid_x = coord_chunk_1.get_valid_xmax(overlap)
     print(f"Valid x for chunk 1: {chunk_1_valid_x}")
 
     chunk_2_valid_x = coord_chunk_2.get_valid_xmin(overlap_cols)
