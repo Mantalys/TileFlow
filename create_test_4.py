@@ -5,7 +5,7 @@ import numpy as np
 from src.tiff_stitching.core.streamer import ImageStreamer, StreamerConfig
 from src.tiff_stitching.core.model import StreamingModel, SobelMagnitude, StardistS4
 from csbdeep.utils import normalize
-from stitch import stitching, Chunk
+from stitch import stitching, Chunk, stitching_list
 import matplotlib.pyplot as plt
 import time
 import cv2
@@ -26,7 +26,7 @@ if __name__ == "__main__":
         image_np, pmin=1, pmax=99.8, axis=(0, 1)
     )  # Normalize to [0, 1]
     # image_np = rescale_intensity(image_np, in_range=(1, 10), out_range=(0, 1))  # Rescale intensity to [0, 1]
-    print(f"image de base : {image_np.shape}")
+
     model = StreamingModel(
         streamer=ImageStreamer(
             config=StreamerConfig(
@@ -51,54 +51,66 @@ if __name__ == "__main__":
 
     tile_size = 128
     overlap_chunk = 1
+    overlap = tile_size * overlap_chunk
 
     # Now, we build an automatic splitting of the image into n_chunks, but still horizontal
     # This is a test to see if the stitching works correctly
     h, w = image_np.shape
-    n_chunks = 2  # Number of chunks to split the image into
-    chunk_height = h
-    w_chunk = w // n_chunks
+    chunk_grid = (1, 4)  # 1 row, n_chunks columns
+    h_chunk = h // chunk_grid[0]  # Width of each chunk based on the number of chunks
+    w_chunk = w // chunk_grid[1]
 
     chunk_list_output = []
-    for i in range(n_chunks):
-        x_start = i * (w_chunk - tile_size * overlap_chunk) if i > 0 else 0
-        x_end = (
-            x_start + w_chunk + (tile_size * overlap_chunk) if i < n_chunks - 1 else w
-        )
-        chunk_infos = Chunk(
-            x_start=x_start,
-            y_start=0,
-            y_end=chunk_height,
-            x_end=x_end,
-            position=i,  # Assigning position based on the loop index
-        )
-        print(
-            f"Chunk {i}: {chunk_infos}, height: {chunk_infos.height}, width: {chunk_infos.width}"
-        )
-        chunk_np = chunk_infos.chunk_image(image_np)
-        print(f"Chunk {i} shape: {chunk_np.shape}")
-        output_chunk = model.stream(chunk_np.copy())
-        print(f"Chunk {i} unique labels: {len(np.unique(output_chunk)) - 1}")
-        chunk_list_output.append(
-            (chunk_infos, output_chunk)
-        )  # Store chunk info and output
 
+    for chunk_column in range(chunk_grid[0]):
+        for chunk_row in range(chunk_grid[1]):
+            # precomputed chunk relative position
+            is_left = chunk_row == 0
+            is_right = chunk_row == chunk_grid[1] - 1
+            is_top = chunk_column == 0
+            is_bottom = chunk_column == chunk_grid[0] - 1
+
+            x_start = chunk_row * w_chunk - (overlap if not is_left else 0)
+            y_start = chunk_column * h_chunk - (overlap if not is_top else 0)
+            x_end = x_start + w_chunk + (overlap if not is_right else 0)
+            y_end = y_start + h_chunk + (overlap if not is_bottom else 0)
+
+            chunk_infos = Chunk(
+                x_start=x_start,
+                y_start=y_start,
+                y_end=y_end,
+                x_end=x_end,
+                position=chunk_row
+                + chunk_column
+                * chunk_grid[1],  # Assigning position based on row and column
+            )
+            print(
+                f"Chunk {chunk_row + chunk_column * chunk_grid[1]}: {chunk_infos}, height: {chunk_infos.height}, width: {chunk_infos.width}"
+            )
+            chunk_np = chunk_infos.chunk_image(image_np)
+            print(
+                f"Chunk {chunk_row + chunk_column * chunk_grid[1]} shape: {chunk_np.shape}"
+            )
+            output_chunk = model.stream(chunk_np.copy())
+            print(
+                f"Chunk {chunk_row + chunk_column * chunk_grid[1]} unique labels: {len(np.unique(output_chunk)) - 1}"
+            )
+            chunk_list_output.append((chunk_infos, output_chunk))
+
+    print(f"TEST {chunk_list_output[1][0].get_valid_xmax(10)}")
     cv2.imwrite("complete.png", (image_np * 255).astype(np.uint8))
     for i, (chunk_infos, output_chunk) in enumerate(chunk_list_output):
         cv2.imwrite(f"chunk{i + 1}.png", (output_chunk * 255).astype(np.uint8))
     output_viridis = cv2.applyColorMap(output.astype(np.uint8), cv2.COLORMAP_VIRIDIS)
     cv2.imwrite("output.png", output_viridis)
 
-    image_full = stitching(
-        chunk_1=chunk_list_output[0][1],
-        chunk_2=chunk_list_output[1][1],
-        coord_chunk_1=chunk_list_output[0][0],
-        coord_chunk_2=chunk_list_output[1][0],
+    image_full = stitching_list(
+        chunk_list_output,
+        chunk_grid=chunk_grid,
         overlap=overlap_chunk,
-        chunk_size=0,
         tile_size=tile_size,
     )
-    print(f"image reconstruite : {image_full.shape}")
+
     bin_reconstructed = image_full.copy()
     bin_reconstructed[bin_reconstructed != 0] = 1
 
