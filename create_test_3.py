@@ -116,6 +116,6 @@ if __name__ == "__main__":
     assert image_full.dtype == np.uint16, (
         f"Type missmatch, excepected {np.uint16}, got {image_full.dtype}"
     )
-    assert len(np.unique(image_full - 1)) == nb_cell, (
-        f"Nb cellulles missmatch, excepted {nb_cell}, got {len(np.unique(image_full - 1))}"
+    assert len(np.unique(image_full))-1 == nb_cell, (
+        f"Nb cellulles missmatch, excepted {nb_cell}, got {len(np.unique(image_full))-1}"
     )
