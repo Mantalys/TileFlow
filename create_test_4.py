@@ -67,6 +67,8 @@ if __name__ == "__main__":
                   w // chunk_size[1] + (1 if w % chunk_size[1] > half_chunk_size[1] else 0))
     print(f"Number of chunks: {chunk_grid}")
     chunk_list_output = []
+
+
     for chunk_row in range(chunk_grid[0]):
          is_top = chunk_row == 0
          is_bottom = chunk_row == chunk_grid[0] - 1
@@ -74,10 +76,15 @@ if __name__ == "__main__":
             # precomputed chunk relative position
             is_left = chunk_column == 0
             is_right = chunk_column == chunk_grid[1] - 1
-            x_start = chunk_column * w_chunk - (overlap) if chunk_column > 0 else 0
-            y_start = chunk_row * h_chunk - (overlap) if chunk_row > 0 else 0
-            x_end = x_start + w_chunk + (overlap) if not is_right else w
-            y_end = y_start + h_chunk + (overlap) if not is_bottom else h
+            x_start = chunk_column * chunk_size[1] - (overlap) if not is_left  else 0
+            y_start = chunk_row * chunk_size[0] - (overlap) if chunk_row > 0 else 0
+            if is_right:
+                x_end = w
+            elif is_left:
+                x_end = x_start + chunk_size[1] + (overlap) 
+            else:
+                x_end = x_start + chunk_size[1] + (overlap * 2) 
+            y_end = y_start + chunk_size[0] + (overlap) if not is_bottom else h
             #on fait la même avec le core pour remplacer get_xmin et on fait une fonction qui dit si on est dans la bbox du core
             chunk_infos = Chunk(
                 x_start=x_start,
@@ -87,15 +94,15 @@ if __name__ == "__main__":
                 position=(chunk_row,chunk_column)  # Assigning position based on row and column
             )
             print(
-                f"Chunk: {chunk_infos}, height: {chunk_infos.height}, width: {chunk_infos.width}"
+                f"Chunk: {chunk_infos.position}, height: {chunk_infos.height}, width: {chunk_infos.width}"
             )
             chunk_np = chunk_infos.chunk_image(image_np)
             print(
-                f"Chunk {chunk_row + chunk_column * chunk_grid[1]} shape: {chunk_np.shape}"
+                f"Chunk {chunk_infos.position} shape: {chunk_np.shape}"
             )
             output_chunk = model.stream(chunk_np.copy())
             print(
-                f"Chunk {chunk_row + chunk_column * chunk_grid[1]} unique labels: {len(np.unique(output_chunk)) - 1}"
+                f"Chunk {chunk_infos.position} unique labels: {len(np.unique(output_chunk)) - 1}"
             )
             chunk_list_output.append((chunk_infos, output_chunk))
   
