@@ -1,56 +1,105 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2
-import random
 import sys
 from skimage.morphology import disk
 import matplotlib.pyplot as plt
 import numpy as np
-from pydantic import BaseModel
-from typing import Tuple
+from typing import Tuple, List
+from src.tiff_stitching.utils import (
+    BBox, Edge
+)
 
 
-# create pydantic Chunk class Chunk:
-class Chunk(BaseModel):
-    x_start: int
-    y_start: int
-    x_end: int
-    y_end: int
-    position: Tuple[
-        int, int
-    ]  #  gives the position of the chunk in the image, 0 for first chunk, 1 for second chunk, etc.
+class ChunkShape:
+    def __init__(self, context: BBox, core: BBox):
+        self.context = context
+        self.core = core
 
     @property
     def width(self) -> int:
-        return self.x_end - self.x_start
+        return self.context[2] - self.context[0]
 
     @property
     def height(self) -> int:
-        return self.y_end - self.y_start
-
-    def chunk_image(self, image) -> np.array:
-        return image[self.y_start : self.y_end, self.x_start : self.x_end]
-
-    def get_valid_xmax(self, overlap: int) -> int:
+        return self.context[3] - self.context[1]
+    
+    @property
+    def shape(self) -> Tuple[int, int]:
+        return (self.height, self.width)
+    
+    @property
+    def core_shape(self) -> Tuple[int, int]:
+        return (self.core[3] - self.core[1], self.core[2] - self.core[0])
+    
+    def is_inside(self, x: float, y: float) -> bool:
         """
-        Returns the valid x coordinate for the chunk, considering the overlap.
+        Check if the point (x, y) is within the core bounding box of the chunk.
         """
-        return self.x_start + self.width - overlap
+        return (
+            self.core[0] <= x < self.core[2] and
+            self.core[1] <= y < self.core[3]
+        )
 
-    def get_valid_xmin(self, overlap: int) -> int:
+
+class Chunk2D:
+    def __init__(self, shape: ChunkShape, edges: Edge, position: Tuple[int, int]):
+        self.shape = shape
+        self.edges = edges
+        self.position = position
+        self.array: np.ndarray = None
+
+    def set_array(self, array: np.ndarray):
         """
-        Returns the valid x coordinate for the chunk, considering the overlap.
+        Sets the array for the chunk, the shape must match the chunk shape.
         """
-        return self.x_start + overlap
+        if array.shape != self.shape.shape:
+            raise ValueError(
+                f"Array shape {array.shape} does not match chunk shape {self.shape.shape}"
+            )
+        self.array = array
 
 
-class ChunkData(BaseModel):
-    polygons: list
-    centroids: list
-    valid_labels: set
+    def get_slice(self) -> Tuple[slice, slice]:
+        """
+        Returns the slice for the chunk based on its context.
+        This is useful for indexing into a larger array.
+        """
+        return (
+            slice(self.shape.context[1], self.shape.context[3]),
+            slice(self.shape.context[0], self.shape.context[2]),
+        )
 
 
-def stitching_list(chunk_list_output, chunk_grid, overlap, tile_size=0):
+class ChunkData:
+    def __init__(self):
+        self.polygons = []
+        self.centroids = []
+        self.valid_labels = set()
+
+
+def extract_polygons(
+        chunks: List[Chunk2D],
+    ):
+    """
+    Extracts polygons and centroids from a list of chunks.
+    """
+    reconstructed = np.zeros(
+        (
+            1400,
+            1868,
+        ),
+        dtype=np.uint16,
+    )
+    return reconstructed
+
+
+
+def stitching_list(
+        chunk_list_output,
+        chunk_grid,
+        overlap
+    ):
     """
     Stitch multiple chunks together based on their coordinates and overlap.
     """
@@ -76,7 +125,7 @@ def stitching_list(chunk_list_output, chunk_grid, overlap, tile_size=0):
     )
     for chunk in range(0, len(chunk_list_output)):
         row, col = chunk_list_output[chunk][0].position
-        print(f"Process Chunk {chunk}")
+        print(f"Process Chunk {chunk}, row: {row}, col: {col}")
         unique_labels1 = np.unique(chunk_list_output[chunk][1])
         chunk_relabel = np.where(
             chunk_list_output[chunk][1] != 0, chunk_list_output[chunk][1] + label_max, 0
@@ -219,136 +268,6 @@ def stitching_list(chunk_list_output, chunk_grid, overlap, tile_size=0):
 
     return reconstructed
 
-
-def stitching(
-    chunk_1: np.array,
-    chunk_2: np.array,
-    coord_chunk_1: Chunk,
-    coord_chunk_2: Chunk,
-    overlap: int,
-    chunk_size: int,
-    tile_size: int,
-) -> np.array:
-    # y10, x10, y11, x11 = coord_chunk_1
-    # y20, x20, y21, x21 = coord_chunk_2
-    # h1, w1 = chunk_1.shape
-    # h2, w2 = chunk_2.shape
-    overlap_cols = overlap
-
-    chunk_1_valid_x = coord_chunk_1.get_valid_xmax(overlap)
-    print(f"Valid x for chunk 1: {chunk_1_valid_x}")
-
-    chunk_2_valid_x = coord_chunk_2.get_valid_xmin(overlap_cols)
-    print(f"Valid x for chunk 2: {chunk_2_valid_x}")
-
-    # Étendre les chunks temporairement pour récupérer les polygones complets
-    # chunk_1_ext = np.concatenate((chunk_1, chunk_2[:, :overlap_cols]), axis=1)
-    # chunk_2_ext = np.concatenate((chunk_1[:, -overlap_cols:], chunk_2), axis=1)
-
-    # Extraction depuis chunk_1 étendu
-    unique_labels1 = np.unique(chunk_1)
-    # unique_labels1 = unique_labels1[unique_labels1 != 0]
-
-    chunk_1_data = ChunkData(polygons=[], centroids=[], valid_labels=set())
-    for label in unique_labels1:
-        if label == 0:
-            continue
-        polygon, centroid = process_mask(
-            chunk_1,
-            label,
-            smooth=0,
-            convex_hull=False,
-            offset=np.array([0, 0]),
-            x_offset=0,
-            y_offset=0,
-            return_centroid=True,
-        )
-        if centroid is None:
-            continue
-
-        x, y = centroid
-        if x < chunk_1_valid_x:  # centroïde dans la zone non-overlap de chunk_1
-            chunk_1_data.polygons.append(polygon)
-            chunk_1_data.centroids.append(centroid)
-            chunk_1_data.valid_labels.add(label)
-
-    # Recalibrage des labels chunk_2
-    max_label_1 = np.max(chunk_1)
-    # chunk_2_ext_relabel = np.where(chunk_2 != 0, chunk_2 + max_label_1 + 1, 0)
-    chunk_2_relabel = np.where(chunk_2 != 0, chunk_2 + max_label_1, 0)
-
-    unique_labels2 = np.unique(chunk_2_relabel)
-    # unique_labels2 = unique_labels2[unique_labels2 != 0]
-
-    chunk_2_data = ChunkData(polygons=[], centroids=[], valid_labels=set())
-    for label in unique_labels2:
-        if label == 0:
-            continue
-        polygon, centroid = process_mask(
-            chunk_2_relabel,
-            label,
-            smooth=0,
-            convex_hull=False,
-            offset=np.array([0, 0]),
-            x_offset=0,
-            y_offset=0,
-            return_centroid=True,
-        )
-        if centroid is None:
-            continue
-        x, y = centroid
-        # x = (
-        # x + coord_chunk_1.width - overlap_cols
-        # )  # Ajustement de l'offset pour chunk_2
-        if x >= overlap * tile_size:  # centroïde dans la zone non-overlap de chunk_2
-            chunk_2_data.polygons.append(polygon)
-            chunk_2_data.centroids.append(centroid)
-            chunk_2_data.valid_labels.add(label)
-
-    # Reconstruction finale (sans overlap doublé)
-    # h_full = x21
-    # w_full = w1 + w2 - overlap_cols
-    print(
-        f"Reconstruction dimensions: height={coord_chunk_1.height}, width={coord_chunk_1.width + coord_chunk_2.width - overlap_cols * 2}"
-    )
-    reconstructed = np.zeros(
-        (
-            coord_chunk_1.height,
-            coord_chunk_1.width + coord_chunk_2.width - overlap_cols * 2,
-        ),
-        dtype=np.uint16,
-    )
-    draw_polygons_in_mask(
-        reconstructed, chunk_1_data.polygons, list(chunk_1_data.valid_labels)
-    )
-    draw_polygons_in_mask(
-        reconstructed,
-        chunk_2_data.polygons,
-        list(chunk_2_data.valid_labels),
-        x_offset=coord_chunk_1.width - overlap_cols * 2,
-    )
-
-    reconstructed = randomize_labels(reconstructed)
-    x_line_mid = chunk_1_valid_x
-
-    x_line_c1_ext = x_line_mid + overlap_cols
-    x_line_c2_ext = x_line_mid - overlap_cols
-    print(x_line_mid, x_line_c1_ext, x_line_c2_ext)
-
-    # Tracer une ligne verte verticale sur toute la hauteur de l'image
-    # (0, 255, 0) = vert en BGR
-
-    # Affichage
-    plt.figure()
-    plt.imshow(reconstructed, cmap="viridis")
-    plt.axvline(x=x_line_c1_ext, color="g", label="c1_extended")
-    plt.axvline(x=x_line_c2_ext, color="g", label="c2_extended")
-    plt.axvline(x=x_line_mid, color="r", label="milieu_image")
-
-    plt.title("Image reconstruite")
-    plt.show()
-
-    return reconstructed
 
 
 def process_mask(
