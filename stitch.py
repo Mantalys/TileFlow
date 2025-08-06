@@ -6,9 +6,7 @@ from skimage.morphology import disk
 import matplotlib.pyplot as plt
 import numpy as np
 from typing import Tuple, List
-from src.tiff_stitching.utils import (
-    BBox, Edge
-)
+from src.tiff_stitching.utils import BBox, Edge
 
 
 class ChunkShape:
@@ -23,23 +21,20 @@ class ChunkShape:
     @property
     def height(self) -> int:
         return self.context[3] - self.context[1]
-    
+
     @property
     def shape(self) -> Tuple[int, int]:
         return (self.height, self.width)
-    
+
     @property
     def core_shape(self) -> Tuple[int, int]:
         return (self.core[3] - self.core[1], self.core[2] - self.core[0])
-    
+
     def is_inside(self, x: float, y: float) -> bool:
         """
         Check if the point (x, y) is within the core bounding box of the chunk.
         """
-        return (
-            self.core[0] <= x < self.core[2] and
-            self.core[1] <= y < self.core[3]
-        )
+        return self.core[0] <= x < self.core[2] and self.core[1] <= y < self.core[3]
 
 
 class Chunk2D:
@@ -58,7 +53,6 @@ class Chunk2D:
                 f"Array shape {array.shape} does not match chunk shape {self.shape.shape}"
             )
         self.array = array
-
 
     def get_slice(self) -> Tuple[slice, slice]:
         """
@@ -79,8 +73,8 @@ class ChunkData:
 
 
 def extract_polygons(
-        chunks: List[Chunk2D],
-    ):
+    chunks: List[Chunk2D],
+):
     """
     Extracts polygons and centroids from a list of chunks.
     """
@@ -94,12 +88,7 @@ def extract_polygons(
     return reconstructed
 
 
-
-def stitching_list(
-        chunk_list_output,
-        chunk_grid,
-        overlap
-    ):
+def stitching_list(chunk_list_output, chunk_grid, overlap):
     """
     Stitch multiple chunks together based on their coordinates and overlap.
     """
@@ -152,7 +141,7 @@ def stitching_list(
             x, y = centroid
             # check if chunk is on the left (no neighbor chunk)
             # could be precomputed
-            if col == 0 and not col ==col_max - 1:
+            if col == 0 and not col == col_max - 1:
                 offset = 0
                 if x < chunk_list_output[chunk][0].get_valid_xmax(overlap):
                     chunk_1_data.polygons.append(polygon)
@@ -160,7 +149,6 @@ def stitching_list(
                     chunk_1_data.valid_labels.add(label)
                     x_offset = 0
 
-            
             elif col == col_max - 1 and not col == 0:
                 offset = chunk_list_output[chunk][0].x_start
                 if x >= chunk_list_output[chunk][0].get_valid_xmin(overlap):
@@ -169,16 +157,14 @@ def stitching_list(
                     chunk_1_data.valid_labels.add(label)
 
             elif col == 0 and col == col_max - 1:
-                
-                if (
-                    chunk_list_output[chunk][0].get_valid_xmin(0) <= x
-                    and x < chunk_list_output[chunk][0].get_valid_xmax(0)
-                ):
+                if chunk_list_output[chunk][0].get_valid_xmin(
+                    0
+                ) <= x and x < chunk_list_output[chunk][0].get_valid_xmax(0):
                     chunk_1_data.polygons.append(polygon)
                     chunk_1_data.centroids.append(centroid)
                     chunk_1_data.valid_labels.add(label)
                 print("Chunk is the only one ")
-                
+
             else:
                 offset = chunk_list_output[chunk][0].x_start
                 if (
@@ -279,7 +265,6 @@ def stitching_list(
     plt.show()
 
     return reconstructed
-
 
 
 def process_mask(
