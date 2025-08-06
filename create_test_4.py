@@ -13,15 +13,13 @@ import cv2
 
 if __name__ == "__main__":
     model_path = (
-        f"/home/valentin-poque-irit/Téléchargements/model_onnx+luca_dapi/model.onnx"
+        r"/home/kevin/Workspace/mantalys/pypelines/packages/mantaplex/models/stardist_r4-f24/model.onnx"
     )
 
     image = (
-        r"/home/valentin-poque-irit/Téléchargements/model_onnx+luca_dapi/luca_dapi.tif"
+        r"/home/kevin/Downloads/LuCa-7color_[13860,52919]_1x1component_data.tif"
     )
-    image_np = imread(image).astype(np.float32)[
-        0
-    ]  # Read the image and convert to float32
+    image_np = imread(image).astype(np.float32)[6]  # Read the image and convert to float32
     image_np = normalize(
         image_np, pmin=1, pmax=99.8, axis=(0, 1)
     )  # Normalize to [0, 1]
@@ -71,18 +69,40 @@ if __name__ == "__main__":
         w // chunk_size[1] + (1 if w % chunk_size[1] > half_chunk_size[1] else 0),
     )
     print(f"Number of chunks: {chunk_grid}")
+
     chunk_list_output = []
     for chunk_row in range(chunk_grid[0]):
         is_top = chunk_row == 0
         is_bottom = chunk_row == chunk_grid[0] - 1
         for chunk_column in range(chunk_grid[1]):
-            # precomputed chunk relative position
             is_left = chunk_column == 0
             is_right = chunk_column == chunk_grid[1] - 1
-            x_start = chunk_column * w_chunk - (overlap) if chunk_column > 0 else 0
-            y_start = chunk_row * h_chunk - (overlap) if chunk_row > 0 else 0
-            x_end = x_start + w_chunk + (overlap) if not is_right else w
-            y_end = y_start + h_chunk + (overlap) if not is_bottom else h
+            print(f"top: {is_top}, bottom: {is_bottom}, left: {is_left}, right: {is_right}")
+
+            # precomputed chunk relative position, manage horizontal first
+            width = chunk_size[1]
+            x_start = chunk_column * width
+            if not is_left:
+                x_start -= overlap # shift to the left to create overlap
+                width += overlap # increase width to account for overlap
+            if not is_right:
+                width += overlap # increase width to account for overlap
+            x_end = x_start + width
+            if x_end > w:
+                x_end = w
+
+            # now we do the same for the vertical position
+            height = chunk_size[0]
+            y_start = chunk_row * height
+            if not is_top:
+                y_start -= overlap
+                height += overlap # increase height to account for overlap
+            if not is_bottom:
+                height += overlap # increase height to account for overlap
+            y_end = y_start + height
+            if y_end > h:
+                y_end = h
+
             # on fait la même avec le core pour remplacer get_xmin et on fait une fonction qui dit si on est dans la bbox du core
             chunk_infos = Chunk(
                 x_start=x_start,
