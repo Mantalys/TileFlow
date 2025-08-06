@@ -57,20 +57,25 @@ if __name__ == "__main__":
     # This is a test to see if the stitching works correctly
     h, w = image_np.shape
     print(f"Image shape: {image_np.shape}")
-    chunk_size = (1400,512)  # Size of each chunk
-    half_chunk_size = (chunk_size[0] // 2, chunk_size[1] // 2)  # Half size of each chunk for overlap calculation
+    chunk_size = (1400, 512)  # Size of each chunk
+    half_chunk_size = (
+        chunk_size[0] // 2,
+        chunk_size[1] // 2,
+    )  # Half size of each chunk for overlap calculation
     # compute the number of chunks based on the image size and chunk size, as a 2D grid.
     # Eg. if the image is 1024x2048 and chunk size is 512, we will have 2 chunks in height and 4 in width.
     # But if the image size is not a multiple of the chunk size, we will have an additional chunk for the remaining pixels.
     # If the remaining pixels are less than the overlap, we will not create a chunk for them, and will add it to the last chunk.
-    chunk_grid = (h // chunk_size[0] + (1 if h % chunk_size[0] > half_chunk_size[0] else 0),
-                  w // chunk_size[1] + (1 if w % chunk_size[1] > half_chunk_size[1] else 0))
+    chunk_grid = (
+        h // chunk_size[0] + (1 if h % chunk_size[0] > half_chunk_size[0] else 0),
+        w // chunk_size[1] + (1 if w % chunk_size[1] > half_chunk_size[1] else 0),
+    )
     print(f"Number of chunks: {chunk_grid}")
     chunk_list_output = []
     for chunk_row in range(chunk_grid[0]):
-         is_top = chunk_row == 0
-         is_bottom = chunk_row == chunk_grid[0] - 1
-         for chunk_column in range(chunk_grid[1]):
+        is_top = chunk_row == 0
+        is_bottom = chunk_row == chunk_grid[0] - 1
+        for chunk_column in range(chunk_grid[1]):
             # precomputed chunk relative position
             is_left = chunk_column == 0
             is_right = chunk_column == chunk_grid[1] - 1
@@ -78,13 +83,16 @@ if __name__ == "__main__":
             y_start = chunk_row * h_chunk - (overlap) if chunk_row > 0 else 0
             x_end = x_start + w_chunk + (overlap) if not is_right else w
             y_end = y_start + h_chunk + (overlap) if not is_bottom else h
-            #on fait la même avec le core pour remplacer get_xmin et on fait une fonction qui dit si on est dans la bbox du core
+            # on fait la même avec le core pour remplacer get_xmin et on fait une fonction qui dit si on est dans la bbox du core
             chunk_infos = Chunk(
                 x_start=x_start,
                 y_start=y_start,
                 y_end=y_end,
                 x_end=x_end,
-                position=(chunk_row,chunk_column)  # Assigning position based on row and column
+                position=(
+                    chunk_row,
+                    chunk_column,
+                ),  # Assigning position based on row and column
             )
             print(
                 f"Chunk: {chunk_infos}, height: {chunk_infos.height}, width: {chunk_infos.width}"
@@ -98,7 +106,7 @@ if __name__ == "__main__":
                 f"Chunk {chunk_row + chunk_column * chunk_grid[1]} unique labels: {len(np.unique(output_chunk)) - 1}"
             )
             chunk_list_output.append((chunk_infos, output_chunk))
-  
+
     print(f"TEST {chunk_list_output[1][0].get_valid_xmax(10)}")
     cv2.imwrite("complete.png", (image_np * 255).astype(np.uint8))
     for i, (chunk_infos, output_chunk) in enumerate(chunk_list_output):
