@@ -92,6 +92,8 @@ if __name__ == "__main__":
             x_end = x_start + width
             if x_end > w:
                 x_end = w
+            if is_right and x_end < w:
+                x_end = w
 
             # now we do the same for the vertical position
             height = chunk_size[0]
@@ -103,6 +105,8 @@ if __name__ == "__main__":
                 height += overlap # increase height to account for overlap
             y_end = y_start + height
             if y_end > h:
+                y_end = h
+            if is_bottom and y_end < h:
                 y_end = h
 
             # on fait la même avec le core pour remplacer get_xmin et on fait une fonction qui dit si on est dans la bbox du core
