@@ -21,7 +21,9 @@ if __name__ == "__main__":
     image = (
         r"/home/valentin-poque-irit/Téléchargements/model_onnx+luca_dapi/luca_dapi.tif"
     )
-    image_np = imread(image).astype(np.float32)[0]  # Read the image and convert to float32
+    image_np = imread(image).astype(np.float32)[
+        0
+    ]  # Read the image and convert to float32
     image_np = normalize(
         image_np, pmin=1, pmax=99.8, axis=(0, 1)
     )  # Normalize to [0, 1]
@@ -79,7 +81,7 @@ if __name__ == "__main__":
         for chunk_column in range(chunk_grid[1]):
             is_left = chunk_column == 0
             is_right = chunk_column == chunk_grid[1] - 1
-            edges : Edge = (
+            edges: Edge = (
                 is_left,  # left
                 is_top,  # top
                 is_right,  # right
@@ -91,10 +93,10 @@ if __name__ == "__main__":
             width = chunk_size[1]
             x_start = chunk_column * width
             if not is_left:
-                x_start -= overlap # shift to the left to create overlap
-                width += overlap # increase width to account for overlap
+                x_start -= overlap  # shift to the left to create overlap
+                width += overlap  # increase width to account for overlap
             if not is_right:
-                width += overlap # increase width to account for overlap
+                width += overlap  # increase width to account for overlap
             x_end = x_start + width
             if x_end > w:
                 x_end = w
@@ -115,9 +117,9 @@ if __name__ == "__main__":
             y_start = chunk_row * height
             if not is_top:
                 y_start -= overlap
-                height += overlap # increase height to account for overlap
+                height += overlap  # increase height to account for overlap
             if not is_bottom:
-                height += overlap # increase height to account for overlap
+                height += overlap  # increase height to account for overlap
             y_end = y_start + height
             if y_end > h:
                 y_end = h
@@ -140,10 +142,7 @@ if __name__ == "__main__":
             # Create the chunk shape
 
             # on fait la même avec le core pour remplacer get_xmin et on fait une fonction qui dit si on est dans la bbox du core
-            chunk_shape = ChunkShape(
-                context=context,
-                core=core
-            )
+            chunk_shape = ChunkShape(context=context, core=core)
             chunk = Chunk2D(
                 shape=chunk_shape,
                 edges=edges,
@@ -152,20 +151,10 @@ if __name__ == "__main__":
                     chunk_column,
                 ),  # Assigning position based on row and column
             )
-            print(
-                f"Chunk: {chunk_shape}, height: {chunk_shape.height}, width: {chunk_shape.width}"
-            )
             chunk_np = image_np[chunk.get_slice()]
-            print(
-                f"Chunk {chunk_infos.position} shape: {chunk_np.shape}"
-            )
             output_chunk = model.stream(chunk_np)
-            print(
-                f"Chunk {chunk_infos.position} unique labels: {len(np.unique(output_chunk)) - 1}"
-            )
             chunk.set_array(output_chunk)
             chunks.append(chunk)
-
 
     cv2.imwrite("complete.png", (image_np * 255).astype(np.uint8))
     for i, chunk in enumerate(chunks):
@@ -173,8 +162,9 @@ if __name__ == "__main__":
     output_viridis = cv2.applyColorMap(output.astype(np.uint8), cv2.COLORMAP_VIRIDIS)
     cv2.imwrite("output.png", output_viridis)
 
-    image_full = extract_polygons(
-        chunks)
+    image_full = extract_polygons(chunks)
+
+    cell_found_stitched = len(np.unique(image_full)) - 1
 
     bin_reconstructed = image_full.copy()
     bin_reconstructed[bin_reconstructed != 0] = 1
@@ -194,6 +184,6 @@ if __name__ == "__main__":
     assert image_full.dtype == np.uint16, (
         f"Type missmatch, excepected {np.uint16}, got {image_full.dtype}"
     )
-    assert len(np.unique(image_full - 1)) == nb_cell, (
-        f"Nb cellulles missmatch, excepted {nb_cell}, got {len(np.unique(image_full - 1))}"
+    assert cell_found_stitched == nb_cell, (
+        f"Nb cellulles missmatch, excepted {nb_cell}, got {cell_found_stitched}"
     )
