@@ -16,7 +16,9 @@ class Chunk(BaseModel):
     y_start: int
     x_end: int
     y_end: int
-    position: Tuple [int,int]  #  gives the position of the chunk in the image, 0 for first chunk, 1 for second chunk, etc.
+    position: Tuple[
+        int, int
+    ]  #  gives the position of the chunk in the image, 0 for first chunk, 1 for second chunk, etc.
 
     @property
     def width(self) -> int:
@@ -56,13 +58,13 @@ def stitching_list(chunk_list_output, chunk_grid, overlap, tile_size=0):
     label_max = 0
     height_reconstructed, width_reconstructed = 0, 0
     height_reconstructed = chunk_list_output[0][0].height
-    width_reconstructed = (chunk_list_output[-1][0].x_end)
-    total_cells=0
-    total_centros=0
-    total_centros1=0
-    x_lines=[]
-    liste_total=[]
-    #x_lines.append(width_reconstructed//2)
+    width_reconstructed = chunk_list_output[-1][0].x_end
+    total_cells = 0
+    total_centros = 0
+    total_centros1 = 0
+    x_lines = []
+    liste_total = []
+    # x_lines.append(width_reconstructed//2)
     print(f"reconstru width {width_reconstructed}")
 
     reconstructed = np.zeros(
@@ -73,87 +75,145 @@ def stitching_list(chunk_list_output, chunk_grid, overlap, tile_size=0):
         dtype=np.uint16,
     )
     for chunk in range(0, len(chunk_list_output)):
-            row, col = chunk_list_output[chunk][0].position
-            print(f"Process Chunk {chunk}")
-            unique_labels1 = np.unique(chunk_list_output[chunk][1])
-            chunk_relabel = np.where(
-                chunk_list_output[chunk][1] != 0, chunk_list_output[chunk][1] + label_max, 0
+        row, col = chunk_list_output[chunk][0].position
+        print(f"Process Chunk {chunk}")
+        unique_labels1 = np.unique(chunk_list_output[chunk][1])
+        chunk_relabel = np.where(
+            chunk_list_output[chunk][1] != 0, chunk_list_output[chunk][1] + label_max, 0
+        )
+        unique_labels2 = np.unique(chunk_relabel)
+        chunk_1_data = ChunkData(polygons=[], centroids=[], valid_labels=set())
+        offset = 0
+        for label in unique_labels2:
+            if label == 0:
+                continue
+            polygon, centroid = process_mask(
+                chunk_relabel,
+                label,
+                smooth=0,
+                convex_hull=False,
+                offset=np.array([0, 0]),
+                x_offset=chunk_list_output[chunk][0].x_start,
+                y_offset=0,
+                return_centroid=True,
             )
-            unique_labels2 = np.unique(chunk_relabel)
-            chunk_1_data = ChunkData(polygons=[], centroids=[], valid_labels=set())
-            offset=0
-            for label in unique_labels2:
-                if label == 0:
-                    continue
-                polygon, centroid = process_mask(
-                    chunk_relabel,
-                    label,
-                    smooth=0,
-                    convex_hull=False,
-                    offset=np.array([0, 0]),
-                    x_offset=chunk_list_output[chunk][0].x_start,
-                    y_offset=0,
-                    return_centroid=True,
-                )
-                if centroid is None:
-                    continue
+            if centroid is None:
+                continue
 
-                x, y = centroid
-                # check if chunk is on the left (no neighbor chunk)
-                # could be precomputed
-                if col == 0:
-                    offset=0
-                    if x < chunk_list_output[chunk][0].get_valid_xmax(overlap):
-                        chunk_1_data.polygons.append(polygon)
-                        chunk_1_data.centroids.append(centroid)
-                        chunk_1_data.valid_labels.add(label)
-                        x_offset=0
+            x, y = centroid
+            # check if chunk is on the left (no neighbor chunk)
+            # could be precomputed
+            if col == 0:
+                offset = 0
+                if x < chunk_list_output[chunk][0].get_valid_xmax(overlap):
+                    chunk_1_data.polygons.append(polygon)
+                    chunk_1_data.centroids.append(centroid)
+                    chunk_1_data.valid_labels.add(label)
+                    x_offset = 0
 
-                elif col == col_max-1:
-                    offset = chunk_list_output[chunk][0].x_start
-                    if x>=chunk_list_output[chunk][0].get_valid_xmin(overlap):
-                        chunk_1_data.polygons.append(polygon)
-                        chunk_1_data.centroids.append(centroid)
-                        chunk_1_data.valid_labels.add(label)
-                
-                else :
-                    offset = chunk_list_output[chunk][0].x_start
-                    if (chunk_list_output[chunk][0].get_valid_xmin(overlap)<=x) and x<chunk_list_output[chunk][0].get_valid_xmax(overlap):
-                        chunk_1_data.polygons.append(polygon)
-                        chunk_1_data.centroids.append(centroid)
-                        chunk_1_data.valid_labels.add(label)
-            label_max = np.max(chunk_relabel)
-            print(f"Chunk {chunk} unique labels: {len((chunk_1_data.valid_labels))}")
-            total_cells+=len((chunk_1_data.valid_labels))
-            print(f"Nb labels avant reconstruction : {total_cells}")
-            total_centros+=len((chunk_1_data.centroids))
-            print(f"Nb centroides avant reconstruction : {total_centros}")
-            total_centros1+=len(set(chunk_1_data.centroids))
-            print(f"Nb centroides avant reconstruction : {total_centros1}")
-            liste_total+=chunk_1_data.centroids
-            print(f"longueur du set centro si != de totalcentro on compte en double {len(set(liste_total))}")
+            elif col == col_max - 1:
+                offset = chunk_list_output[chunk][0].x_start
+                if x >= chunk_list_output[chunk][0].get_valid_xmin(overlap):
+                    chunk_1_data.polygons.append(polygon)
+                    chunk_1_data.centroids.append(centroid)
+                    chunk_1_data.valid_labels.add(label)
 
-            draw_polygons_in_mask(
-                    reconstructed, chunk_1_data.polygons, list(chunk_1_data.valid_labels),x_offset=offset)
-            if chunk != len(chunk_list_output)-1:
-                x_lines.append((col,chunk_list_output[chunk][0].x_start,chunk_list_output[chunk][0].x_end))
             else:
-                x_lines.append((col,chunk_list_output[chunk][0].x_start,chunk_list_output[chunk][0].get_valid_xmax(overlap)+overlap-1))#-1 is just for plot if we don't do this the figure would be enlarge and there would be an empty area
+                offset = chunk_list_output[chunk][0].x_start
+                if (
+                    chunk_list_output[chunk][0].get_valid_xmin(overlap) <= x
+                ) and x < chunk_list_output[chunk][0].get_valid_xmax(overlap):
+                    chunk_1_data.polygons.append(polygon)
+                    chunk_1_data.centroids.append(centroid)
+                    chunk_1_data.valid_labels.add(label)
+        label_max = np.max(chunk_relabel)
+        print(f"Chunk {chunk} unique labels: {len((chunk_1_data.valid_labels))}")
+        total_cells += len((chunk_1_data.valid_labels))
+        print(f"Nb labels avant reconstruction : {total_cells}")
+        total_centros += len((chunk_1_data.centroids))
+        print(f"Nb centroides avant reconstruction : {total_centros}")
+        total_centros1 += len(set(chunk_1_data.centroids))
+        print(f"Nb centroides avant reconstruction : {total_centros1}")
+        liste_total += chunk_1_data.centroids
+        print(
+            f"longueur du set centro si != de totalcentro on compte en double {len(set(liste_total))}"
+        )
+
+        draw_polygons_in_mask(
+            reconstructed,
+            chunk_1_data.polygons,
+            list(chunk_1_data.valid_labels),
+            x_offset=offset,
+        )
+        if chunk != len(chunk_list_output) - 1:
+            x_lines.append(
+                (
+                    col,
+                    chunk_list_output[chunk][0].x_start,
+                    chunk_list_output[chunk][0].x_end,
+                )
+            )
+        else:
+            x_lines.append(
+                (
+                    col,
+                    chunk_list_output[chunk][0].x_start,
+                    chunk_list_output[chunk][0].get_valid_xmax(overlap) + overlap - 1,
+                )
+            )  # -1 is just for plot if we don't do this the figure would be enlarge and there would be an empty area
 
     reconstructed = randomize_labels(reconstructed)
     plt.figure()
     plt.imshow(reconstructed, cmap="viridis")
-    for i,start,end in x_lines:
-        if i==len(x_lines)-1:
-            plt.axvline(x=start, color="g")#début chunk en vert
-            plt.text(start-5, 0, f"Début Chunk {i}", color="g", rotation=30, va='bottom', fontsize=10)
-            plt.axvline(x=end-5, color="r",label=f"Chunk_{i}_end")#fin chunk en rouge
-            plt.text(end + 5, 0, f"Fin Chunk {i}", color="r", rotation=30, va='bottom', fontsize=10)
+    for i, start, end in x_lines:
+        if i == len(x_lines) - 1:
+            plt.axvline(x=start, color="g")  # début chunk en vert
+            plt.text(
+                start - 5,
+                0,
+                f"Début Chunk {i}",
+                color="g",
+                rotation=30,
+                va="bottom",
+                fontsize=10,
+            )
+            plt.axvline(
+                x=end - 5, color="r", label=f"Chunk_{i}_end"
+            )  # fin chunk en rouge
+            plt.text(
+                end + 5,
+                0,
+                f"Fin Chunk {i}",
+                color="r",
+                rotation=30,
+                va="bottom",
+                fontsize=10,
+            )
         else:
-            plt.axvline(x=start, color="g",label=f"Chunk_{i}_start")#début chunk en vert
-            plt.text(start - 5, 0, f"Début Chunk {i}", color="g", rotation=30, va='bottom', fontsize=10)
-            plt.text(end - 5, 0, f"Fin Chunk {i}", color="r", rotation=30, va='bottom', fontsize=10)
-            plt.axvline(x=end+2, color="r",label=f"Chunk_{i}_end")#fin chunk en rouge
+            plt.axvline(
+                x=start, color="g", label=f"Chunk_{i}_start"
+            )  # début chunk en vert
+            plt.text(
+                start - 5,
+                0,
+                f"Début Chunk {i}",
+                color="g",
+                rotation=30,
+                va="bottom",
+                fontsize=10,
+            )
+            plt.text(
+                end - 5,
+                0,
+                f"Fin Chunk {i}",
+                color="r",
+                rotation=30,
+                va="bottom",
+                fontsize=10,
+            )
+            plt.axvline(
+                x=end + 2, color="r", label=f"Chunk_{i}_end"
+            )  # fin chunk en rouge
     plt.axis("on")
     plt.show()
 
