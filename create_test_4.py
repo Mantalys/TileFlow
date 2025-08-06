@@ -55,7 +55,7 @@ if __name__ == "__main__":
     # This is a test to see if the stitching works correctly
     h, w = image_np.shape
     print(f"Image shape: {image_np.shape}")
-    chunk_size = (1400, 512)  # Size of each chunk
+    chunk_size = (1400, 256)  # Size of each chunk
     half_chunk_size = (
         chunk_size[0] // 2,
         chunk_size[1] // 2,
@@ -90,6 +90,8 @@ if __name__ == "__main__":
             x_end = x_start + width
             if x_end > w:
                 x_end = w
+            if is_right and x_end < w:
+                x_end = w
 
             # now we do the same for the vertical position
             height = chunk_size[0]
@@ -101,6 +103,8 @@ if __name__ == "__main__":
                 height += overlap # increase height to account for overlap
             y_end = y_start + height
             if y_end > h:
+                y_end = h
+            if is_bottom and y_end < h:
                 y_end = h
 
             # on fait la même avec le core pour remplacer get_xmin et on fait une fonction qui dit si on est dans la bbox du core
