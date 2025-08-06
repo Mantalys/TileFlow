@@ -78,13 +78,96 @@ def extract_polygons(
     """
     Extracts polygons and centroids from a list of chunks.
     """
+    width_reconstructed = chunks[-1].shape.core[2]
+    height_reconstructed = chunks[-1].shape.core[3]
+    label_max = 0
     reconstructed = np.zeros(
         (
-            1400,
-            1868,
+            height_reconstructed,
+            width_reconstructed,
         ),
         dtype=np.uint16,
     )
+    print(f"Reconstructed image size: {reconstructed.shape}")
+
+    for chunk in chunks:
+        if chunk.array is None:
+            continue
+        unique_labels1 = np.unique(chunk.array)
+        chunk_relabel = np.where(
+                    chunk.array != 0, (chunk.array) + label_max, 0
+                )
+        unique_labels2 = np.unique(chunk_relabel)
+        for label in unique_labels2:
+            if label == 0:
+                continue
+            polygon, centroid = process_mask(
+                chunk_relabel,
+                label,
+                smooth=0,
+                convex_hull=False,
+                offset=np.array([0, 0]),
+                x_offset=chunk.shape.context[0],
+                y_offset=chunk.shape.context[1],
+                return_centroid=True,
+            )
+            if centroid is None:
+                continue
+            x, y = centroid
+            if chunk.shape.is_inside(x, y):
+                chunk_data = ChunkData()
+                chunk_data.polygons.append(polygon)
+                chunk_data.centroids.append(centroid)
+                chunk_data.valid_labels.add(label)
+
+                # Draw the polygon in the reconstructed image
+                draw_polygons_in_mask(
+                    reconstructed,
+                    chunk_data.polygons,
+                    list(chunk_data.valid_labels),
+                    x_offset=chunk.shape.context[0],
+                    y_offset=chunk.shape.context[1],
+                )  
+        label_max += np.max(chunk.array)
+
+    # Randomize labels in the reconstructed image
+    reconstructed = randomize_labels(reconstructed)
+    plt.figure()
+    plt.imshow(reconstructed, cmap="viridis")
+    plt.axis("off")
+    # Draw context lines as rectangle including their overlap  for each chunk
+    for chunk in chunks:
+        x_start, y_start, x_end, y_end = chunk.shape.context
+        plt.gca().add_patch(
+            plt.Rectangle(
+                (x_start, y_start),
+                x_end - x_start,
+                y_end - y_start,
+                edgecolor='#ED1AFD',
+                facecolor='none',
+                linewidth=2,
+                label=f"Chunk {chunk.position}"
+            )
+        )
+    # Draw core lines as rectangle including their overlap  for each chunk  
+    for chunk in chunks:
+        core_x_start, core_y_start, core_x_end, core_y_end = chunk.shape.core
+        plt.gca().add_patch(
+            plt.Rectangle(
+                (core_x_start, core_y_start),
+                core_x_end - core_x_start,
+                core_y_end - core_y_start,
+                edgecolor='#FFFFFF',
+                facecolor='none',
+                linewidth=2,
+                label=f"Core {chunk.position}"
+            )
+        )
+
+    
+
+    plt.axis("on")
+    plt.show()
     return reconstructed
 
 

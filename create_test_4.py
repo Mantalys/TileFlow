@@ -1,6 +1,7 @@
 from tifffile import imread
 
 from skimage.exposure import rescale_intensity
+from skimage.segmentation import expand_labels
 import numpy as np
 from src.tiff_stitching.core.streamer import ImageStreamer, StreamerConfig
 from src.tiff_stitching.core.model import StreamingModel, SobelMagnitude, StardistS4
@@ -138,7 +139,7 @@ if __name__ == "__main__":
             context = (x_start, y_start, x_end, y_end)
             core = (core_x_start, core_y_start, core_x_end, core_y_end)
 
-            print(f"Chunk context: {context}, core: {core}")
+            print(f"Chunk context: {context}, core: {core}, chunk size: {chunk_size}, ")
             # Create the chunk shape
 
             # on fait la même avec le core pour remplacer get_xmin et on fait une fonction qui dit si on est dans la bbox du core
@@ -153,6 +154,7 @@ if __name__ == "__main__":
             )
             chunk_np = image_np[chunk.get_slice()]
             output_chunk = model.stream(chunk_np)
+            #output_chunk = expand_labels(output_chunk, distance=5)  # Expand labels to avoid small gaps
             chunk.set_array(output_chunk)
             chunks.append(chunk)
 
@@ -163,6 +165,7 @@ if __name__ == "__main__":
     cv2.imwrite("output.png", output_viridis)
 
     image_full = extract_polygons(chunks)
+
 
     cell_found_stitched = len(np.unique(image_full)) - 1
 
