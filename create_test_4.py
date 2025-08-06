@@ -55,7 +55,7 @@ if __name__ == "__main__":
     # This is a test to see if the stitching works correctly
     h, w = image_np.shape
     print(f"Image shape: {image_np.shape}")
-    chunk_size = (1400, 256)  # Size of each chunk
+    chunk_size = (1400, 1400)  # Size of each chunk
     half_chunk_size = (
         chunk_size[0] // 2,
         chunk_size[1] // 2,
@@ -133,7 +133,7 @@ if __name__ == "__main__":
             )
             chunk_list_output.append((chunk_infos, output_chunk))
 
-    print(f"TEST {chunk_list_output[1][0].get_valid_xmax(10)}")
+    #print(f"TEST {chunk_list_output[1][0].get_valid_xmax(10)}")
     cv2.imwrite("complete.png", (image_np * 255).astype(np.uint8))
     for i, (chunk_infos, output_chunk) in enumerate(chunk_list_output):
         cv2.imwrite(f"chunk{i + 1}.png", (output_chunk * 255).astype(np.uint8))
