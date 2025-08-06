@@ -15,13 +15,13 @@ from typing import List, Tuple
 
 if __name__ == "__main__":
     model_path = (
-        r"/home/kevin/Workspace/mantalys/pypelines/packages/mantaplex/models/stardist_r4-f24/model.onnx"
+        r"/home/valentin-poque-irit/Téléchargements/model_onnx+luca_dapi/model.onnx"
     )
 
     image = (
-        r"/home/kevin/Downloads/LuCa-7color_[13860,52919]_1x1component_data.tif"
+        r"/home/valentin-poque-irit/Téléchargements/model_onnx+luca_dapi/luca_dapi.tif"
     )
-    image_np = imread(image).astype(np.float32)[6]  # Read the image and convert to float32
+    image_np = imread(image).astype(np.float32)[0]  # Read the image and convert to float32
     image_np = normalize(
         image_np, pmin=1, pmax=99.8, axis=(0, 1)
     )  # Normalize to [0, 1]
@@ -157,11 +157,11 @@ if __name__ == "__main__":
             )
             chunk_np = image_np[chunk.get_slice()]
             print(
-                f"Chunk {chunk_row + chunk_column * chunk_grid[1]} shape: {chunk_np.shape}"
+                f"Chunk {chunk_infos.position} shape: {chunk_np.shape}"
             )
             output_chunk = model.stream(chunk_np)
             print(
-                f"Chunk {chunk_row + chunk_column * chunk_grid[1]} unique labels: {len(np.unique(output_chunk)) - 1}"
+                f"Chunk {chunk_infos.position} unique labels: {len(np.unique(output_chunk)) - 1}"
             )
             chunk.set_array(output_chunk)
             chunks.append(chunk)

@@ -152,7 +152,7 @@ def stitching_list(
             x, y = centroid
             # check if chunk is on the left (no neighbor chunk)
             # could be precomputed
-            if col == 0:
+            if col == 0 and not col ==col_max - 1:
                 offset = 0
                 if x < chunk_list_output[chunk][0].get_valid_xmax(overlap):
                     chunk_1_data.polygons.append(polygon)
@@ -160,13 +160,25 @@ def stitching_list(
                     chunk_1_data.valid_labels.add(label)
                     x_offset = 0
 
-            elif col == col_max - 1:
+            
+            elif col == col_max - 1 and not col == 0:
                 offset = chunk_list_output[chunk][0].x_start
                 if x >= chunk_list_output[chunk][0].get_valid_xmin(overlap):
                     chunk_1_data.polygons.append(polygon)
                     chunk_1_data.centroids.append(centroid)
                     chunk_1_data.valid_labels.add(label)
 
+            elif col == 0 and col == col_max - 1:
+                
+                if (
+                    chunk_list_output[chunk][0].get_valid_xmin(0) <= x
+                    and x < chunk_list_output[chunk][0].get_valid_xmax(0)
+                ):
+                    chunk_1_data.polygons.append(polygon)
+                    chunk_1_data.centroids.append(centroid)
+                    chunk_1_data.valid_labels.add(label)
+                print("Chunk is the only one ")
+                
             else:
                 offset = chunk_list_output[chunk][0].x_start
                 if (
