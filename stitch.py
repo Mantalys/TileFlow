@@ -57,7 +57,7 @@ def stitching_list(chunk_list_output, chunk_grid, overlap, tile_size=0):
     row_max, col_max = chunk_grid
     label_max = 0
     height_reconstructed, width_reconstructed = 0, 0
-    height_reconstructed = chunk_list_output[0][0].height
+    height_reconstructed = chunk_list_output[-1][0].y_end
     width_reconstructed = chunk_list_output[-1][0].x_end
     total_cells = 0
     total_centros = 0
@@ -84,6 +84,7 @@ def stitching_list(chunk_list_output, chunk_grid, overlap, tile_size=0):
         unique_labels2 = np.unique(chunk_relabel)
         chunk_1_data = ChunkData(polygons=[], centroids=[], valid_labels=set())
         offset = 0
+        offset_y = 0
         for label in unique_labels2:
             if label == 0:
                 continue
@@ -103,41 +104,150 @@ def stitching_list(chunk_list_output, chunk_grid, overlap, tile_size=0):
             x, y = centroid
             # check if chunk is on the left (no neighbor chunk)
             # could be precomputed
-            if col == 0 and not col ==col_max - 1:
-                offset = 0
-                if x < chunk_list_output[chunk][0].get_valid_xmax(overlap):
-                    chunk_1_data.polygons.append(polygon)
-                    chunk_1_data.centroids.append(centroid)
-                    chunk_1_data.valid_labels.add(label)
-                    x_offset = 0
+            if row == 0 and not row == row_max - 1:
+                offset_y = 0
 
+                if col == 0 and not col ==col_max - 1:
+                    offset = 0
+                    if x < chunk_list_output[chunk][0].get_valid_xmax(overlap):
+                        chunk_1_data.polygons.append(polygon)
+                        chunk_1_data.centroids.append(centroid)
+                        chunk_1_data.valid_labels.add(label)
+                        x_offset = 0
+
+                
+                elif col == col_max - 1 and not col == 0:
+                    offset = chunk_list_output[chunk][0].x_start
+                    if x >= chunk_list_output[chunk][0].get_valid_xmin(overlap):
+                        chunk_1_data.polygons.append(polygon)
+                        chunk_1_data.centroids.append(centroid)
+                        chunk_1_data.valid_labels.add(label)
+
+                elif col == 0 and col == col_max - 1:
+                    
+                    if (
+                        chunk_list_output[chunk][0].get_valid_xmin(0) <= x
+                        and x < chunk_list_output[chunk][0].get_valid_xmax(0)
+                    ):
+                        chunk_1_data.polygons.append(polygon)
+                        chunk_1_data.centroids.append(centroid)
+                        chunk_1_data.valid_labels.add(label)
+                    
+                else:
+                    offset = chunk_list_output[chunk][0].x_start
+                    if (
+                        chunk_list_output[chunk][0].get_valid_xmin(overlap) <= x
+                    ) and x < chunk_list_output[chunk][0].get_valid_xmax(overlap):
+                        chunk_1_data.polygons.append(polygon)
+                        chunk_1_data.centroids.append(centroid)
+                        chunk_1_data.valid_labels.add(label)
             
-            elif col == col_max - 1 and not col == 0:
-                offset = chunk_list_output[chunk][0].x_start
-                if x >= chunk_list_output[chunk][0].get_valid_xmin(overlap):
-                    chunk_1_data.polygons.append(polygon)
-                    chunk_1_data.centroids.append(centroid)
-                    chunk_1_data.valid_labels.add(label)
+            elif row == row_max - 1 and not row == 0:
+                offset_y = chunk_list_output[chunk][0].y_start
+                if col == 0 and not col == col_max - 1:
+                    offset = 0
+                    if x < chunk_list_output[chunk][0].get_valid_xmax(overlap):
+                        chunk_1_data.polygons.append(polygon)
+                        chunk_1_data.centroids.append(centroid)
+                        chunk_1_data.valid_labels.add(label)
+                        x_offset = 0
 
-            elif col == 0 and col == col_max - 1:
-                
-                if (
-                    chunk_list_output[chunk][0].get_valid_xmin(0) <= x
-                    and x < chunk_list_output[chunk][0].get_valid_xmax(0)
-                ):
-                    chunk_1_data.polygons.append(polygon)
-                    chunk_1_data.centroids.append(centroid)
-                    chunk_1_data.valid_labels.add(label)
-                print("Chunk is the only one ")
-                
+                elif col == col_max - 1 and not col == 0:
+                    offset = chunk_list_output[chunk][0].x_start
+                    if x >= chunk_list_output[chunk][0].get_valid_xmin(overlap):
+                        chunk_1_data.polygons.append(polygon)
+                        chunk_1_data.centroids.append(centroid)
+                        chunk_1_data.valid_labels.add(label)
+
+                elif col == 0 and col == col_max - 1:
+                    
+                    if (
+                        chunk_list_output[chunk][0].get_valid_xmin(0) <= x
+                        and x < chunk_list_output[chunk][0].get_valid_xmax(0)
+                    ):
+                        chunk_1_data.polygons.append(polygon)
+                        chunk_1_data.centroids.append(centroid)
+                        chunk_1_data.valid_labels.add(label)
+
+                else:
+                    offset = chunk_list_output[chunk][0].x_start
+                    if (
+                        chunk_list_output[chunk][0].get_valid_xmin(overlap) <= x
+                    ) and x < chunk_list_output[chunk][0].get_valid_xmax(overlap):
+                        chunk_1_data.polygons.append(polygon)
+                        chunk_1_data.centroids.append(centroid)
+                        chunk_1_data.valid_labels.add(label)
+            elif row == 0 and row == row_max - 1:
+                offset_y = 0
+                if col == 0 and not col == col_max - 1:
+                    offset = 0
+                    if x < chunk_list_output[chunk][0].get_valid_xmax(overlap):
+                        chunk_1_data.polygons.append(polygon)
+                        chunk_1_data.centroids.append(centroid)
+                        chunk_1_data.valid_labels.add(label)
+                        x_offset = 0
+
+                elif col == col_max - 1 and not col == 0:
+                    offset = chunk_list_output[chunk][0].x_start
+                    if x >= chunk_list_output[chunk][0].get_valid_xmin(overlap):
+                        chunk_1_data.polygons.append(polygon)
+                        chunk_1_data.centroids.append(centroid)
+                        chunk_1_data.valid_labels.add(label)
+
+                elif col == 0 and col == col_max - 1:
+                    
+                    if (
+                        chunk_list_output[chunk][0].get_valid_xmin(0) <= x
+                        and x < chunk_list_output[chunk][0].get_valid_xmax(0)
+                    ):
+                        chunk_1_data.polygons.append(polygon)
+                        chunk_1_data.centroids.append(centroid)
+                        chunk_1_data.valid_labels.add(label)
+
+                else:
+                    offset = chunk_list_output[chunk][0].x_start
+                    if (
+                        chunk_list_output[chunk][0].get_valid_xmin(overlap) <= x
+                    ) and x < chunk_list_output[chunk][0].get_valid_xmax(overlap):
+                        chunk_1_data.polygons.append(polygon)
+                        chunk_1_data.centroids.append(centroid)
+                        chunk_1_data.valid_labels.add(label)
             else:
-                offset = chunk_list_output[chunk][0].x_start
-                if (
-                    chunk_list_output[chunk][0].get_valid_xmin(overlap) <= x
-                ) and x < chunk_list_output[chunk][0].get_valid_xmax(overlap):
-                    chunk_1_data.polygons.append(polygon)
-                    chunk_1_data.centroids.append(centroid)
-                    chunk_1_data.valid_labels.add(label)
+                offset_y = chunk_list_output[chunk][0].y_start
+                if col == 0 and not col == col_max - 1:
+                    offset = 0
+                    if x < chunk_list_output[chunk][0].get_valid_xmax(overlap):
+                        chunk_1_data.polygons.append(polygon)
+                        chunk_1_data.centroids.append(centroid)
+                        chunk_1_data.valid_labels.add(label)
+                        x_offset = 0
+
+                elif col == col_max - 1 and not col == 0:
+                    offset = chunk_list_output[chunk][0].x_start
+                    if x >= chunk_list_output[chunk][0].get_valid_xmin(overlap):
+                        chunk_1_data.polygons.append(polygon)
+                        chunk_1_data.centroids.append(centroid)
+                        chunk_1_data.valid_labels.add(label)
+
+                elif col == 0 and col == col_max - 1:
+                    
+                    if (
+                        chunk_list_output[chunk][0].get_valid_xmin(0) <= x
+                        and x < chunk_list_output[chunk][0].get_valid_xmax(0)
+                    ):
+                        chunk_1_data.polygons.append(polygon)
+                        chunk_1_data.centroids.append(centroid)
+                        chunk_1_data.valid_labels.add(label)
+
+                else:
+                    offset = chunk_list_output[chunk][0].x_start
+                    if (
+                        chunk_list_output[chunk][0].get_valid_xmin(overlap) <= x
+                    ) and x < chunk_list_output[chunk][0].get_valid_xmax(overlap):
+                        chunk_1_data.polygons.append(polygon)
+                        chunk_1_data.centroids.append(centroid)
+                        chunk_1_data.valid_labels.add(label)
+                    
         label_max = np.max(chunk_relabel)
         print(f"Chunk {chunk} unique labels: {len((chunk_1_data.valid_labels))}")
         total_cells += len((chunk_1_data.valid_labels))
@@ -156,6 +266,7 @@ def stitching_list(chunk_list_output, chunk_grid, overlap, tile_size=0):
             chunk_1_data.polygons,
             list(chunk_1_data.valid_labels),
             x_offset=offset,
+            y_offset=offset_y,
         )
         if chunk != len(chunk_list_output) - 1:
             x_lines.append(

@@ -55,7 +55,7 @@ if __name__ == "__main__":
     # This is a test to see if the stitching works correctly
     h, w = image_np.shape
     print(f"Image shape: {image_np.shape}")
-    chunk_size = (1400, 1400)  # Size of each chunk
+    chunk_size = (512, 1400)  # Size of each chunk
     half_chunk_size = (
         chunk_size[0] // 2,
         chunk_size[1] // 2,
