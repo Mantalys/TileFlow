@@ -57,8 +57,8 @@ if __name__ == "__main__":
     # This is a test to see if the stitching works correctly
     h, w = image_np.shape
     chunk_grid = (1, 4)  # 1 row, n_chunks columns
-    h_chunk = h // chunk_grid[0]  # Width of each chunk based on the number of chunks
-    w_chunk = w // chunk_grid[1]
+    h_chunk = w // chunk_grid[0]  # Width of each chunk based on the number of chunks
+    w_chunk = h // chunk_grid[1]
 
     chunk_list_output = []
 
@@ -69,10 +69,10 @@ if __name__ == "__main__":
             # precomputed chunk relative position
             is_left = chunk_column == 0
             is_right = chunk_column == chunk_grid[1] - 1
-            x_start = chunk_column * w_chunk - (overlap if not is_left else 0)
-            y_start = chunk_row * h_chunk - (overlap if not is_top else 0)
-            x_end = x_start + w_chunk + (overlap if not is_right else 0)
-            y_end = y_start + h_chunk + (overlap if not is_bottom else 0)
+            x_start = chunk_column * w_chunk - (overlap) if chunk_column > 0 else 0
+            y_start = chunk_row * h_chunk - (overlap) if chunk_row > 0 else 0
+            x_end = x_start + w_chunk + (overlap) if not is_right else w
+            y_end = y_start + h_chunk + (overlap) if not is_bottom else h
             #on fait la même avec le core pour remplacer get_xmin et on fait une fonction qui dit si on est dans la bbox du core
             chunk_infos = Chunk(
                 x_start=x_start,
