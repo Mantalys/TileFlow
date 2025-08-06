@@ -4,11 +4,13 @@ from skimage.exposure import rescale_intensity
 import numpy as np
 from src.tiff_stitching.core.streamer import ImageStreamer, StreamerConfig
 from src.tiff_stitching.core.model import StreamingModel, SobelMagnitude, StardistS4
+from src.tiff_stitching.utils import Edge
 from csbdeep.utils import normalize
-from stitch import stitching, Chunk, stitching_list
+from stitch import ChunkShape, Chunk2D, stitching_list, extract_polygons
 import matplotlib.pyplot as plt
 import time
 import cv2
+from typing import List, Tuple
 
 
 if __name__ == "__main__":
@@ -19,7 +21,9 @@ if __name__ == "__main__":
     image = (
         r"/home/valentin-poque-irit/Téléchargements/model_onnx+luca_dapi/luca_dapi.tif"
     )
-    image_np = imread(image).astype(np.float32)[0]  # Read the image and convert to float32
+    image_np = imread(image).astype(np.float32)[
+        0
+    ]  # Read the image and convert to float32
     image_np = normalize(
         image_np, pmin=1, pmax=99.8, axis=(0, 1)
     )  # Normalize to [0, 1]
@@ -55,7 +59,7 @@ if __name__ == "__main__":
     # This is a test to see if the stitching works correctly
     h, w = image_np.shape
     print(f"Image shape: {image_np.shape}")
-    chunk_size = (512, 1400)  # Size of each chunk
+    chunk_size = (512, 512)  # Size of each chunk
     half_chunk_size = (
         chunk_size[0] // 2,
         chunk_size[1] // 2,
@@ -70,81 +74,97 @@ if __name__ == "__main__":
     )
     print(f"Number of chunks: {chunk_grid}")
 
-    chunk_list_output = []
-
-
+    chunks: List[Chunk2D] = []
     for chunk_row in range(chunk_grid[0]):
         is_top = chunk_row == 0
         is_bottom = chunk_row == chunk_grid[0] - 1
         for chunk_column in range(chunk_grid[1]):
             is_left = chunk_column == 0
             is_right = chunk_column == chunk_grid[1] - 1
-            print(f"top: {is_top}, bottom: {is_bottom}, left: {is_left}, right: {is_right}")
+            edges: Edge = (
+                is_left,  # left
+                is_top,  # top
+                is_right,  # right
+                is_bottom,  # bottom
+            )
+            print(f"edges: {edges}")
 
             # precomputed chunk relative position, manage horizontal first
             width = chunk_size[1]
             x_start = chunk_column * width
             if not is_left:
-                x_start -= overlap # shift to the left to create overlap
-                width += overlap # increase width to account for overlap
+                x_start -= overlap  # shift to the left to create overlap
+                width += overlap  # increase width to account for overlap
             if not is_right:
-                width += overlap # increase width to account for overlap
+                width += overlap  # increase width to account for overlap
             x_end = x_start + width
             if x_end > w:
                 x_end = w
             if is_right and x_end < w:
                 x_end = w
 
+            if is_left:
+                core_x_start = 0
+            else:
+                core_x_start = x_start + overlap
+            if is_right:
+                core_x_end = w
+            else:
+                core_x_end = x_end - overlap
+
             # now we do the same for the vertical position
             height = chunk_size[0]
             y_start = chunk_row * height
             if not is_top:
                 y_start -= overlap
-                height += overlap # increase height to account for overlap
+                height += overlap  # increase height to account for overlap
             if not is_bottom:
-                height += overlap # increase height to account for overlap
+                height += overlap  # increase height to account for overlap
             y_end = y_start + height
             if y_end > h:
                 y_end = h
             if is_bottom and y_end < h:
                 y_end = h
+            if is_top:
+                core_y_start = 0
+            else:
+                core_y_start = y_start + overlap
+            if is_bottom:
+                core_y_end = h
+            else:
+                core_y_end = y_end - overlap
+
+            # Create the chunk shape
+            context = (x_start, y_start, x_end, y_end)
+            core = (core_x_start, core_y_start, core_x_end, core_y_end)
+
+            print(f"Chunk context: {context}, core: {core}")
+            # Create the chunk shape
 
             # on fait la même avec le core pour remplacer get_xmin et on fait une fonction qui dit si on est dans la bbox du core
-            chunk_infos = Chunk(
-                x_start=x_start,
-                y_start=y_start,
-                y_end=y_end,
-                x_end=x_end,
+            chunk_shape = ChunkShape(context=context, core=core)
+            chunk = Chunk2D(
+                shape=chunk_shape,
+                edges=edges,
                 position=(
                     chunk_row,
                     chunk_column,
                 ),  # Assigning position based on row and column
             )
-            print(
-                f"Chunk: {chunk_infos.position}, height: {chunk_infos.height}, width: {chunk_infos.width}"
-            )
-            chunk_np = chunk_infos.chunk_image(image_np)
-            print(
-                f"Chunk {chunk_infos.position} shape: {chunk_np.shape}"
-            )
-            output_chunk = model.stream(chunk_np.copy())
-            print(
-                f"Chunk {chunk_infos.position} unique labels: {len(np.unique(output_chunk)) - 1}"
-            )
-            chunk_list_output.append((chunk_infos, output_chunk))
+            chunk_np = image_np[chunk.get_slice()]
+            output_chunk = model.stream(chunk_np)
+            chunk.set_array(output_chunk)
+            chunks.append(chunk)
 
-    #print(f"TEST {chunk_list_output[1][0].get_valid_xmax(10)}")
     cv2.imwrite("complete.png", (image_np * 255).astype(np.uint8))
-    for i, (chunk_infos, output_chunk) in enumerate(chunk_list_output):
-        cv2.imwrite(f"chunk{i + 1}.png", (output_chunk * 255).astype(np.uint8))
+    for i, chunk in enumerate(chunks):
+        cv2.imwrite(f"chunk{i + 1}.png", (chunk.array * 255).astype(np.uint8))
     output_viridis = cv2.applyColorMap(output.astype(np.uint8), cv2.COLORMAP_VIRIDIS)
     cv2.imwrite("output.png", output_viridis)
 
-    image_full = stitching_list(
-        chunk_list_output,
-        chunk_grid=chunk_grid,
-        overlap=overlap,
-    )
+    image_full = extract_polygons(chunks)
+
+    cell_found_stitched = len(np.unique(image_full)) - 1
 
     bin_reconstructed = image_full.copy()
     bin_reconstructed[bin_reconstructed != 0] = 1
@@ -164,6 +184,6 @@ if __name__ == "__main__":
     assert image_full.dtype == np.uint16, (
         f"Type missmatch, excepected {np.uint16}, got {image_full.dtype}"
     )
-    assert len(np.unique(image_full - 1)) == nb_cell, (
-        f"Nb cellulles missmatch, excepted {nb_cell}, got {len(np.unique(image_full - 1))}"
+    assert cell_found_stitched == nb_cell, (
+        f"Nb cellulles missmatch, excepted {nb_cell}, got {cell_found_stitched}"
     )
