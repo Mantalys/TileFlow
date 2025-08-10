@@ -1,11 +1,14 @@
-# tiff-stitching
-Tiff stitching is a Python library to predict over large tiff images in smaller chunks and tiles and to stitch back the data to a large image
+# TileFlow
 
-# Install locally
+Fast, memory‑efficient image tiling & reconstruction for deep learning and whole‑slide images.
 
-```bash
-uv venv
-# activate venv
-uv sync
-uv run
-```
+## Features
+- Zero‑copy numpy views for tiles (when possible)
+- Overlap/stride control with accurate merge
+- Lazy pipelines with pluggable processors
+- WSI backends (TIFF, Zarr/Dask)
+
+## Install
+pip install tileflow
+
+## Quickstart
