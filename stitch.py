@@ -94,9 +94,7 @@ def extract_polygons(
         if chunk.array is None:
             continue
         unique_labels1 = np.unique(chunk.array)
-        chunk_relabel = np.where(
-                    chunk.array != 0, (chunk.array) + label_max, 0
-                )
+        chunk_relabel = np.where(chunk.array != 0, (chunk.array) + label_max, 0)
         unique_labels2 = np.unique(chunk_relabel)
         for label in unique_labels2:
             if label == 0:
@@ -127,7 +125,7 @@ def extract_polygons(
                     list(chunk_data.valid_labels),
                     x_offset=chunk.shape.context[0],
                     y_offset=chunk.shape.context[1],
-                )  
+                )
         label_max += np.max(chunk.array)
 
     # Randomize labels in the reconstructed image
@@ -143,13 +141,13 @@ def extract_polygons(
                 (x_start, y_start),
                 x_end - x_start,
                 y_end - y_start,
-                edgecolor='#ED1AFD',
-                facecolor='none',
+                edgecolor="#ED1AFD",
+                facecolor="none",
                 linewidth=2,
-                label=f"Chunk {chunk.position}"
+                label=f"Chunk {chunk.position}",
             )
         )
-    # Draw core lines as rectangle including their overlap  for each chunk  
+    # Draw core lines as rectangle including their overlap  for each chunk
     for chunk in chunks:
         core_x_start, core_y_start, core_x_end, core_y_end = chunk.shape.core
         plt.gca().add_patch(
@@ -157,14 +155,12 @@ def extract_polygons(
                 (core_x_start, core_y_start),
                 core_x_end - core_x_start,
                 core_y_end - core_y_start,
-                edgecolor='#FFFFFF',
-                facecolor='none',
+                edgecolor="#FFFFFF",
+                facecolor="none",
                 linewidth=2,
-                label=f"Core {chunk.position}"
+                label=f"Core {chunk.position}",
             )
         )
-
-    
 
     plt.axis("on")
     plt.show()

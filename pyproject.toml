@@ -1,5 +1,9 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
 [project]
-name = "tiff_stitching"
+name = "tileflow"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -16,6 +20,7 @@ dependencies = [
     "scikit-image>=0.25.2",
     "tifffile>=2025.6.11",
     "zarr>=3.1.0",
+    "imagecodecs"
 ]
 
 [dependency-groups]
@@ -26,4 +31,11 @@ dev = [
     "pytest>=8.4.1",
     "ruff>=0.12.7",
 ]
+
+[tool.hatch.build]
+# include only the src package and essential files
+include = ["src/tileflow", "README.md", "LICENSE"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tileflow"]
 
