@@ -35,9 +35,7 @@ if __name__ == "__main__":
     model_path = r"/home/kevin/Workspace/mantalys/pypelines/packages/mantaplex/models/stardist_r4-f24/model.onnx"
     # image = r"/home/kevin/Downloads/LuCa-7color_[17572,60173]_3x3component_data.tif"
     image = r"/home/kevin/Downloads/LuCa-7color_[13860,52919]_1x1component_data.tif"
-    image_np = imread(image).astype(np.float32)[6][
-        :512, :512
-    ]  # Read the image and convert to float32
+    image_np = imread(image).astype(np.float32)[6][:880, :880]  # Read the image and convert to float32
     image_np = normalize(
         image_np, pmin=1, pmax=99.8, axis=(0, 1)
     )  # Normalize to [0, 1]
@@ -51,10 +49,10 @@ if __name__ == "__main__":
     time_end = time.time()
     print(f"Time taken: {time_end - time_start} seconds")
 
-    cv2.imwrite(
-        f"reconstructed.png",
-        (reconstructed / np.max(reconstructed) * 255).astype(np.uint8),
-    )
+    plt.figure()
+    plt.imshow(reconstructed, cmap="viridis")
+    plt.axis("off")
+    plt.show()
 
     exit()
 

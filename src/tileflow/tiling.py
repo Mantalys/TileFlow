@@ -21,10 +21,10 @@ class GridSpec:
         grid_shape = self.grid_shape(image_shape)
         rh, rw = self.size
         for row in range(grid_shape[0]):
-            y_start = row * rh + self.origin[0]
             for col in range(grid_shape[1]):
                 edges = self.edges_from_index((row, col), grid_shape)
                 x_start = col * rw + self.origin[1]
+                y_start = row * rh + self.origin[0]
                 width = rw
                 height = rh
 

@@ -20,6 +20,43 @@ class NewImageStreamer:
         self.image = image
         self.grid = self.build_grid(image.shape)
 
+    def display_grid_over_image(self):
+        """
+        Display the grid of regions over the image.
+        """
+        import matplotlib.pyplot as plt
+        from matplotlib.patches import Rectangle
+
+        fig, ax = plt.subplots()
+        ax.imshow(self.image, cmap="viridis")
+        ax.axis("off")
+        ax.set_aspect("equal")
+
+        for tile in self.grid:
+            x0, y0, x1, y1 = tile.geometry.halo
+            ax.add_patch(
+                Rectangle(
+                    (x0, y0),
+                    x1 - x0,
+                    y1 - y0,
+                    fill=False,
+                    edgecolor="blue",
+                    linewidth=0.5,
+                )
+            )
+            cx0, cy0, cx1, cy1 = tile.geometry.core
+            ax.add_patch(
+                Rectangle(
+                    (cx0, cy0),
+                    cx1 - cx0,
+                    cy1 - cy0,
+                    fill=False,
+                    edgecolor="green",
+                    linewidth=0.8,
+                )
+            )
+        plt.show()
+
     def build_grid(self, image_shape):
         """
         Build a grid of regions based on the image shape.
@@ -35,6 +72,7 @@ class NewImageStreamer:
 
     def process(self, image) -> np.ndarray:
         self.set_image(image)
+        # self.display_grid_over_image()
         regions: List[RegionImage] = []
         for tile in self.grid:
             tile_np = image[tile.get_halo_slices()]
@@ -94,11 +132,11 @@ class TileFlow:
         )
 
     @classmethod
-    def for_numpy(cls, image_np, tile_size, overlap):
+    def for_numpy(cls, tile_size, overlap):
         """
         Create a TileFlow instance from a NumPy array. Assumes the array is a 2D image.
         """
-        return NewImageStreamer(image=image_np, tile_size=tile_size, overlap=overlap)
+        return NewImageStreamer(tile_size=tile_size, overlap=overlap)
 
     @classmethod
     def for_large_numpy(
