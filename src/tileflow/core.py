@@ -1,9 +1,8 @@
-# from tileflow.streamer import ImageStreamer, LargeImageStreamer, ZarrStreamer
 from typing import NamedTuple, Tuple, Optional, List
 
 import numpy as np
 
-# Type alias for a 2D array, used for image data
+
 Image2D = np.ndarray
 
 
@@ -141,6 +140,18 @@ class RegionImage:
         self.image_data: List[Image2D] = (
             image_data if isinstance(image_data, list) else [image_data]
         )
+
+    @property
+    def x_start(self) -> int:
+        return self.region_spec.geometry.halo.x0
+
+    @property
+    def y_start(self) -> int:
+        return self.region_spec.geometry.halo.y0
+
+    @property
+    def core_bbox(self) -> BBox:
+        return self.region_spec.geometry.core
 
     def only_core_image(self) -> List[Image2D]:
         """Returns the core part of the image data."""

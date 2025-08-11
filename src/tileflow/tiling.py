@@ -1,5 +1,5 @@
 from tileflow.core import RegionSpec, RegionGeometry, RegionPosition, BBox, RegionEdges
-from typing import NamedTuple, Tuple, Optional, Iterator
+from typing import Tuple, Iterator
 from dataclasses import dataclass
 
 
