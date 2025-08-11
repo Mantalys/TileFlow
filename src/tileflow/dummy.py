@@ -12,9 +12,7 @@ Mode = Literal["perlin", "random_max"]
 # -----------------------------
 
 
-def _perlin_2d(
-    shape: Tuple[int, int], scale: int, *, seed: Optional[int] = None
-) -> np.ndarray:
+def _perlin_2d(shape: Tuple[int, int], scale: int, *, seed: Optional[int] = None) -> np.ndarray:
     """2D Perlin noise in [0, 1]. `scale` is approx cell size in pixels."""
     H, W = shape
     rng = np.random.default_rng(seed)
@@ -119,9 +117,7 @@ def generate_dummy(
     """Create a demo image with the specified mode."""
     H, W = shape
     if mode == "perlin":
-        img = perlin_fbm(
-            (H, W), base_scale=perlin_scale, octaves=perlin_octaves, seed=seed
-        )
+        img = perlin_fbm((H, W), base_scale=perlin_scale, octaves=perlin_octaves, seed=seed)
     elif mode == "random_max":
         rng = np.random.default_rng(seed)
         img = rng.random((H, W), dtype=np.float32)
@@ -135,9 +131,7 @@ def generate_dummy(
 
 
 class DummySobelModel:
-    def __init__(
-        self, tile_size: Tuple[int, int] = (128, 128), overlap: Tuple[int, int] = (2, 2)
-    ):
+    def __init__(self, tile_size: Tuple[int, int] = (128, 128), overlap: Tuple[int, int] = (2, 2)):
         self.tile_size = tile_size
         self.overlap = overlap
 

@@ -14,13 +14,9 @@ def reconstruct(regions: List[RegionImage]) -> List[Image2D]:
     """
     last_region = regions[-1]
     if not last_region.region_spec.position.edges.right:
-        raise ValueError(
-            "Last region must have a right edge to determine full image size."
-        )
+        raise ValueError("Last region must have a right edge to determine full image size.")
     if not last_region.region_spec.position.edges.bottom:
-        raise ValueError(
-            "Last region must have a bottom edge to determine full image size."
-        )
+        raise ValueError("Last region must have a bottom edge to determine full image size.")
 
     width_reconstructed = last_region.region_spec.geometry.core.x1
     height_reconstructed = last_region.region_spec.geometry.core.y1
@@ -38,8 +34,8 @@ def reconstruct(regions: List[RegionImage]) -> List[Image2D]:
         core_bbox = region.region_spec.geometry.core
         core_image = region.only_core_image()
         for i in range(len(core_image)):
-            reconstructed[i][
-                core_bbox.y0 : core_bbox.y1, core_bbox.x0 : core_bbox.x1
-            ] = core_image[i]
+            reconstructed[i][core_bbox.y0 : core_bbox.y1, core_bbox.x0 : core_bbox.x1] = core_image[
+                i
+            ]
 
     return reconstructed

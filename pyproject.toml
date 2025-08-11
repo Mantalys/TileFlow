@@ -29,3 +29,18 @@ include = ["src/tileflow", "README.md", "LICENSE"]
 [tool.hatch.build.targets.wheel]
 packages = ["src/tileflow"]
 
+[tool.ruff]
+line-length = 100
+preview = true
+extend-exclude = ["docs"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "Q", "D"]
+ignore = ["D203", "D213"]
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+

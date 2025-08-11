@@ -6,9 +6,7 @@ from dataclasses import dataclass
 @dataclass(frozen=True, eq=True)
 class GridSpec:
     size: Tuple[int, int]  # (height, width), raw size of the region
-    halo: Tuple[
-        int, int
-    ]  # (height, width), size of the halo around the region, used for overlap
+    halo: Tuple[int, int]  # (height, width), size of the halo around the region, used for overlap
     origin: Tuple[int, int] = (0, 0)  # (y, x) origin of the grid, default is (0, 0)
 
     def grid_shape(self, shape: Tuple[int, int]) -> Tuple[int, int]:
@@ -75,9 +73,7 @@ class GridSpec:
                 position = RegionPosition(position=(row, col), edges=edges)
                 yield RegionSpec(geometry=geometry, position=position)
 
-    def edges_from_index(
-        self, yx: Tuple[int, int], grid_shape: Tuple[int, int]
-    ) -> RegionEdges:
+    def edges_from_index(self, yx: Tuple[int, int], grid_shape: Tuple[int, int]) -> RegionEdges:
         nrows, ncols = grid_shape
         y, x = yx
         left = x == 0

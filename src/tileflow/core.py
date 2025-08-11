@@ -75,10 +75,7 @@ class BBox(NamedTuple):
 
     def intersects(self, other: "BBox") -> bool:
         return not (
-            self.x1 <= other.x0
-            or self.x0 >= other.x1
-            or self.y1 <= other.y0
-            or self.y0 >= other.y1
+            self.x1 <= other.x0 or self.x0 >= other.x1 or self.y1 <= other.y0 or self.y0 >= other.y1
         )
 
     def intersection(self, other: "BBox") -> Optional["BBox"]:
@@ -91,9 +88,7 @@ class BBox(NamedTuple):
             min(self.y1, other.y1),
         )
 
-    def expand(
-        self, left: int = 0, right: int = 0, top: int = 0, bottom: int = 0
-    ) -> "BBox":
+    def expand(self, left: int = 0, right: int = 0, top: int = 0, bottom: int = 0) -> "BBox":
         return BBox(self.x0 - left, self.y0 - top, self.x1 + right, self.y1 + bottom)
 
 

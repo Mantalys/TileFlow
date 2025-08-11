@@ -34,9 +34,7 @@ class ProgressCallback(TileFlowCallback):
             f"Processed tile {tile_index}/{total_tiles} ({(tile_index / total_tiles) * 100:.2f}%)"
         )
 
-    def on_chunk_processed(
-        self, region: RegionImage, chunk_index: int, total_chunks: int
-    ):
+    def on_chunk_processed(self, region: RegionImage, chunk_index: int, total_chunks: int):
         print(
             f"Processed chunk {chunk_index}/{total_chunks} ({(chunk_index / total_chunks) * 100:.2f}%)"
         )
