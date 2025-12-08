@@ -4,14 +4,65 @@ build-backend = "hatchling.build"
 
 [project]
 name = "tileflow"
-version = "0.2.0"
-description = "Add your description here"
+version = "0.6.0"
+description = "Fast, memory-efficient image tiling and reconstruction for deep learning and scientific computing"
 readme = "README.md"
+license = {file = "LICENSE"}
 requires-python = ">=3.13"
+authors = [
+    {name = "TileFlow Contributors"},
+]
+maintainers = [
+    {name = "TileFlow Contributors"},
+]
+keywords = [
+    "image-processing",
+    "tiling", 
+    "deep-learning",
+    "scientific-computing",
+    "computer-vision",
+    "memory-efficient",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Image Processing",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Operating System :: OS Independent",
+    "Typing :: Typed",
+]
 
 dependencies = [
     "numpy>=2.2.0",
+    "zarr>=3.1.1",
 ]
+
+[project.optional-dependencies]
+monitoring = [
+    "codecarbon>=2.4.0",  # Energy consumption tracking
+    "psutil>=5.9.0",      # System monitoring
+]
+
+benchmarks = [
+    "matplotlib>=3.8.0",
+    "seaborn>=0.13.0",
+    "pandas>=2.2.0",
+    "scikit-image>=0.22.0",
+]
+all = [
+    "tileflow[monitoring,benchmarks]",
+]
+
+[project.urls]
+Homepage = "https://github.com/mantalys/tileflow"
+Repository = "https://github.com/mantalys/tileflow.git"
 
 [dependency-groups]
 dev = [
@@ -19,28 +70,219 @@ dev = [
     "isort>=6.0.1",
     "mypy>=1.17.0",
     "pytest>=8.4.1",
+    "pytest-cov>=6.0.0",
     "ruff>=0.12.7",
+    "pre-commit>=4.0.0",
+    "tox>=4.0.0",
+    "build>=1.0.0",
+    "twine>=5.0.0",
+]
+test = [
+    "pytest>=8.4.1",
+    "pytest-cov>=6.0.0", 
+    "pytest-mock>=3.12.0",
+    "hypothesis>=6.100.0",
 ]
 
 [tool.hatch.build]
-# include only the src package and essential files
-include = ["src/tileflow", "README.md", "LICENSE"]
+include = [
+    "src/tileflow/**/*.py",
+    "README.md", 
+    "LICENSE",
+    "CHANGELOG.md",
+]
+exclude = [
+    "scripts/",
+    "tests/",
+    "docs/",
+    "*.egg-info/",
+    "__pycache__/",
+    "*.pyc",
+    ".git/",
+    ".pytest_cache/",
+    ".coverage",
+    "carbon_logs/",
+    "monitoring_logs/",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/tileflow"]
 
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/",
+    "tests/", 
+    "scripts/",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "pyproject.toml",
+]
+
+# Version is managed directly in pyproject.toml
+
+# Ruff configuration
 [tool.ruff]
 line-length = 100
+target-version = "py313"
 preview = true
-extend-exclude = ["docs"]
+extend-exclude = [
+    "docs/", 
+    "scripts/",
+    ".git/",
+    "__pycache__/",
+    "*.egg-info/",
+]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "Q", "D"]
-ignore = ["D203", "D213"]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings  
+    "F",      # pyflakes
+    "I",      # isort
+    "UP",     # pyupgrade
+    "B",      # flake8-bugbear
+    "Q",      # flake8-quotes
+    "D",      # pydocstyle
+    "C4",     # flake8-comprehensions
+    "SIM",    # flake8-simplify
+    "TCH",    # flake8-type-checking
+    "PL",     # pylint
+    "RUF",    # ruff-specific rules
+]
+ignore = [
+    "D203",   # 1 blank line required before class docstring
+    "D213",   # Multi-line docstring summary should start at the second line
+    "PLR0913", # Too many arguments to function call
+    "PLR2004", # Magic value used in comparison
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "D100",   # Missing docstring in public module
+    "D103",   # Missing docstring in public function
+    "PLR2004", # Magic value used in comparison (OK in tests)
+    "S101",   # Use of assert detected
+]
+"scripts/**/*.py" = [
+    "D100",   # Missing docstring in public module
+    "T201",   # print found (OK in scripts)
+]
 
 [tool.ruff.format]
 docstring-code-format = true
+quote-style = "double"
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
+
+[tool.ruff.lint.isort]
+known-first-party = ["tileflow"]
+force-sort-within-sections = true
+
+# Black configuration
+[tool.black]
+line-length = 100
+target-version = ["py313"]
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+    \.git
+  | \.pytest_cache
+  | \.mypy_cache
+  | \.venv
+  | __pycache__
+  | build
+  | dist
+)/
+'''
+
+# isort configuration  
+[tool.isort]
+profile = "black"
+line_length = 100
+known_first_party = ["tileflow"]
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+
+# MyPy configuration
+[tool.mypy]
+python_version = "3.13"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = [
+    "zarr.*",
+    "codecarbon.*", 
+    "psutil.*",
+]
+ignore_missing_imports = true
+
+# Pytest configuration
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config", 
+    "--verbose",
+    "--tb=short",
+    "--cov=src/tileflow",
+    "--cov-report=term-missing",
+    "--cov-report=html:htmlcov",
+    "--cov-report=xml",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "gpu: marks tests requiring GPU resources",
+]
+filterwarnings = [
+    "error",
+    "ignore::UserWarning",
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+
+# Coverage configuration
+[tool.coverage.run]
+source = ["src/tileflow"]
+branch = true
+omit = [
+    "*/tests/*",
+    "*/examples.py",
+    "*/__main__.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "def __str__",
+    "raise AssertionError", 
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
+show_missing = true
+precision = 2
+skip_covered = false
 
