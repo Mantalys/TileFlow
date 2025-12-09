@@ -2,7 +2,7 @@
 
 This module provides the fundamental building blocks for TileFlow's tiling system:
 - BBox: Immutable bounding box operations
-- RegionEdges: Boundary detection for grid edges  
+- RegionEdges: Boundary detection for grid edges
 - RegionGeometry: Core and halo region specifications
 - RegionSpec: Complete tile specification with position and geometry
 - RegionImage: Container for processed tile data
@@ -112,7 +112,7 @@ class BBox(NamedTuple):
 
 class TileGeometry(NamedTuple):
     """Tile geometry specification with core and halo regions.
-    
+
     The core region is the area of interest for reconstruction,
     while the halo includes overlap areas for seamless processing.
     """
@@ -132,7 +132,7 @@ class TileGeometry(NamedTuple):
 
 class TilePosition(NamedTuple):
     """Position of a tile in the processing grid.
-    
+
     Contains both grid coordinates and boundary edge information.
     """
 
@@ -142,7 +142,7 @@ class TilePosition(NamedTuple):
 
 class TileSpec(NamedTuple):
     """Complete specification of a tile in the processing grid.
-    
+
     Combines geometry (core and halo bounding boxes) with position
     information for comprehensive tile description.
     """
@@ -162,7 +162,7 @@ class TileSpec(NamedTuple):
 
 class ProcessedTile:
     """Container for processed image data associated with a specific tile.
-    
+
     Stores both the tile specification and the processed image data,
     enabling proper reconstruction and spatial referencing.
     """

@@ -85,23 +85,11 @@ class GridSpec:
                     tile_y_end = image_shape[0]
 
                 # Calculate region bounds (area of interest for reconstruction)
-                if edges.left:
-                    region_x_start = self.origin[1]
-                else:
-                    region_x_start = tile_x_start + self.overlap[1]
-                if edges.right:
-                    region_x_end = image_shape[1]
-                else:
-                    region_x_end = tile_x_end - self.overlap[1]
+                region_x_start = self.origin[1] if edges.left else tile_x_start + self.overlap[1]
+                region_x_end = image_shape[1] if edges.right else tile_x_end - self.overlap[1]
 
-                if edges.top:
-                    region_y_start = self.origin[0]
-                else:
-                    region_y_start = tile_y_start + self.overlap[0]
-                if edges.bottom:
-                    region_y_end = image_shape[0]
-                else:
-                    region_y_end = tile_y_end - self.overlap[0]
+                region_y_start = self.origin[0] if edges.top else tile_y_start + self.overlap[0]
+                region_y_end = image_shape[0] if edges.bottom else tile_y_end - self.overlap[0]
 
                 region_bbox = BBox(region_x_start, region_y_start, region_x_end, region_y_end)
                 tile_bbox = BBox(tile_x_start, tile_y_start, tile_x_end, tile_y_end)

@@ -5,37 +5,11 @@ import numpy as np
 from tileflow.core import Image2D, ProcessedTile, new_image2d
 
 
-def reconstruct(tiles: list[ProcessedTile]) -> list[Image2D]:
-    """Reconstruct a full image from a list of processed tiles.
-
-    Parameters
-    ----------
-    tiles : list[ProcessedTile]
-        List of processed tiles to reconstruct the image from
-
-    Returns
-    -------
-    list[ImageData]
-        List of reconstructed images, one per channel
-
-    Raises
-    ------
-    ValueError
-        If tiles don't form a valid reconstruction grid
-    """
+def reconstruct(tiles: list[ProcessedTile], region_shape: tuple[int, int]) -> list[Image2D]:
+    """Reconstruct full image from processed tiles."""
+    print(f"Reconstructing image of shape: {region_shape} from {len(tiles)} tiles")
+    height_reconstructed, width_reconstructed = region_shape
     last_tile = tiles[-1]
-    if not last_tile.tile_spec.position.edges.right:
-        raise ValueError("Last tile must have a right edge to determine full image size.")
-    if not last_tile.tile_spec.position.edges.bottom:
-        raise ValueError("Last tile must have a bottom edge to determine full image size.")
-
-    if last_tile.image_data is None:
-        raise ValueError("Last tile must have valid image data to determine output structure.")
-
-    # Get output dimensions from the last tile's region bounds (core area)
-    width_reconstructed = last_tile.tile_spec.geometry.core.x1
-    height_reconstructed = last_tile.tile_spec.geometry.core.y1
-
     # Handle both single array and list of arrays
     if isinstance(last_tile.image_data, list):
         sample_data = last_tile.image_data
@@ -54,7 +28,7 @@ def reconstruct(tiles: list[ProcessedTile]) -> list[Image2D]:
     # Create output arrays with optimized allocation
     if len(sample_shape) >= 3:
         # Multi-channel: create single array with optimized memory layout
-        reconstructed = [np.empty(output_shape, dtype=sample_data[0].dtype, order='C')]
+        reconstructed = [np.empty(output_shape, dtype=sample_data[0].dtype, order="C")]
         # Zero-fill only if needed (some processors might fill completely)
         reconstructed[0].fill(0)
     else:
@@ -63,7 +37,7 @@ def reconstruct(tiles: list[ProcessedTile]) -> list[Image2D]:
             np.empty(
                 (height_reconstructed, width_reconstructed),
                 dtype=data.dtype,
-                order='C'  # C-contiguous for better cache performance
+                order="C",  # C-contiguous for better cache performance
             )
             for data in sample_data
         ]
@@ -91,7 +65,7 @@ def reconstruct(tiles: list[ProcessedTile]) -> list[Image2D]:
             ]
             # Use copyto for better performance when shapes match
             if target_view.shape == region_data.shape:
-                np.copyto(target_view, region_data, casting='same_kind')
+                np.copyto(target_view, region_data, casting="same_kind")
             else:
                 target_view[:] = region_data
         else:
@@ -101,7 +75,7 @@ def reconstruct(tiles: list[ProcessedTile]) -> list[Image2D]:
                     region_bbox.y0 : region_bbox.y1, region_bbox.x0 : region_bbox.x1
                 ]
                 if target_view.shape == region_img.shape:
-                    np.copyto(target_view, region_img, casting='same_kind')
+                    np.copyto(target_view, region_img, casting="same_kind")
                 else:
                     target_view[:] = region_img
 
