@@ -104,6 +104,10 @@ class TileFlowMasked:
             if self.optimize and tile_mask is not None and np.all(tile_mask == 0):
                 continue
             tile_region = array[y0:y1, x0:x1]
+            
+            # apply mask if provided
+            if self.optimize and tile_mask is not None:
+                tile_region = tile_region * tile_mask
 
             tile_processed = self._processor(tile_region, tile_spec)
             tiles.append(ProcessedTile(tile_spec=tile_spec, image_data=tile_processed))
@@ -132,6 +136,10 @@ class TileFlowMasked:
             # read region there to optimize disk access, receiving np.ndarray
             chunk_region = streamable.read_region(self.level, self.channels, y0, y1, x0, x1)
             chunk_output = self._process_by_tiles(chunk_region, chunk_mask, return_tiles=False)
+
+            # apply mask to chunk output
+            if self.optimize and chunk_mask is not None:
+                chunk_output = chunk_output * chunk_mask
 
             # Apply chunk processor if provided
             if self._chunk_processor:
