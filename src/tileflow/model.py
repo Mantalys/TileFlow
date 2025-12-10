@@ -82,7 +82,8 @@ class TileFlowMasked:
             # use only tiles
             # array = streamable.get_level(self.level)[self.channels : self.channels + 1][0]
             array = streamable.read_raster(self.level, self.channels)
-            result = self._process_by_tiles(array)
+            mask = streamable.read_mask_region(self.level, 0, array.shape[0], 0, array.shape[1])
+            result = self._process_by_tiles(array, mask)
         return result
 
     def _process_by_tiles(
