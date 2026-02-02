@@ -16,7 +16,9 @@ if __name__ == "__main__":
     max_image_overlap = model_overlap.run(image)
     print(f"Processing time with overlap: {time.time() - time_start:.2f} seconds")
 
-    model_no_overlap = TileFlow(tile_size=(128, 128), overlap=(0, 0), chunk_size=(512, 512), n_workers=2)
+    model_no_overlap = TileFlow(
+        tile_size=(128, 128), overlap=(0, 0), chunk_size=(512, 512), n_workers=2
+    )
     model_no_overlap.configure(function=max_filter2d)
     time_start = time.time()
     max_image_no_overlap = model_no_overlap.run(image)
