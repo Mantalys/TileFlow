@@ -124,12 +124,10 @@ class TestSobelEdgeDetector:
 
         # Create a dummy tile spec for testing
         from tileflow.core import TileSpec, TileGeometry, BBox, TilePosition
+
         tile_spec = TileSpec(
-            geometry=TileGeometry(
-                core=BBox(0, 0, 10, 10),
-                halo=BBox(0, 0, 10, 10)
-            ),
-            position=TilePosition(0, 0)
+            geometry=TileGeometry(core=BBox(0, 0, 10, 10), halo=BBox(0, 0, 10, 10)),
+            position=TilePosition(0, 0),
         )
         edges = detector._sobel_filter(image, tile_spec)
 
@@ -156,7 +154,7 @@ class TestSobelEdgeDetector:
         """Test edge detection on multichannel images."""
         detector = SobelEdgeDetector(tile_size=(64, 64), overlap=(4, 4))
         multichannel_image = generate_multichannel_image(shape=(3, 128, 128))
-        
+
         # Process each channel
         for c in range(3):
             channel = multichannel_image[c]

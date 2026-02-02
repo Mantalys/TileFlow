@@ -2,7 +2,7 @@
 
 This module provides:
 - Synthetic image generation (Perlin noise, random max filters)
-- Multi-channel CHW format support 
+- Multi-channel CHW format support
 - SobelEdgeDetector: Reference implementation using TileFlow
 - Test data generators for microscopy-like multi-channel images
 
