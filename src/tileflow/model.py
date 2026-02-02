@@ -7,10 +7,12 @@ This module implements TileFlow's main processing pipeline:
 - Multi-dimensional support: Handle CHW, CHWD, and arbitrary array shapes
 """
 
+from abc import abstractmethod
 from collections.abc import Callable
 from typing import Any
 
 import numpy as np
+from skimage.exposure import rescale_intensity
 
 from tileflow.backends import Streamable, as_streamable
 from tileflow.callback import CompositeCallback, ProcessingStats, TileFlowCallback
@@ -18,7 +20,6 @@ from tileflow.core import ProcessedTile, TileSpec
 from tileflow.reconstruction import reconstruct
 from tileflow.tiling import GridSpec
 from tileflow.utils import validate_overlap, validate_tile_size
-from abc import abstractmethod
 
 
 class MaskedStreamable:
@@ -26,7 +27,7 @@ class MaskedStreamable:
     def read_raster(self, level: int, channels: int | list[int]) -> np.ndarray:
         pass
 
-    @abstractmethod    
+    @abstractmethod
     def get_shape_hw(self) -> tuple[int, int]:
         pass
 
@@ -35,8 +36,11 @@ class MaskedStreamable:
         pass
 
     @abstractmethod
-    def read_region(self, level: int, channels:int | list[int], y0: int, y1: int, x0: int, x1: int) -> np.ndarray:
+    def read_region(
+        self, level: int, channels: int | list[int], y0: int, y1: int, x0: int, x1: int
+    ) -> np.ndarray:
         pass
+
 
 class TileFlowMasked:
     def __init__(
@@ -46,6 +50,7 @@ class TileFlowMasked:
         chunk_size: tuple[int, int] | None = None,
         chunk_overlap: tuple[int, int] = (0, 0),
         optimize=True,
+        normalize=True,
     ):
         self.tile_size = tile_size
         self.tile_overlap = tile_overlap
@@ -57,8 +62,11 @@ class TileFlowMasked:
         self.level = None
         self.channels = None
         self.optimize = optimize
+        self.normalize = normalize
 
-    def configure(self, level: str, channels: list[int], function: Callable, chunk_function: Callable) -> None:
+    def configure(
+        self, level: str, channels: list[int], function: Callable, chunk_function: Callable
+    ) -> None:
         if not callable(function):
             raise TypeError("function must be callable")
         if chunk_function is not None and not callable(chunk_function):
@@ -90,7 +98,8 @@ class TileFlowMasked:
         self, array: np.ndarray, mask: np.ndarray | None = None, return_tiles: bool = False
     ) -> np.ndarray | list[ProcessedTile]:
         """Process with direct tiling (no chunking)."""
-
+        if self.normalize:
+            array = rescale_intensity(array)
         region_shape = array.shape
         grid_spec = GridSpec(size=self.tile_size, overlap=self.tile_overlap)
         tile_specs = list(grid_spec.build_grid(region_shape))
@@ -104,7 +113,7 @@ class TileFlowMasked:
             if self.optimize and tile_mask is not None and np.all(tile_mask == 0):
                 continue
             tile_region = array[y0:y1, x0:x1]
-            
+
             # apply mask if provided
             if self.optimize and tile_mask is not None:
                 tile_region = tile_region * tile_mask
@@ -144,6 +153,7 @@ class TileFlowMasked:
             # Apply chunk processor if provided
             if self._chunk_processor:
                 self._chunk_processor(chunk_output, chunk_spec)
+
 
 ### -------------------------------------------------------------------------------
 

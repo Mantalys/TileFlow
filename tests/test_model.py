@@ -116,7 +116,7 @@ class TestTileFlow:
         """Test processor naming."""
         processor = TileFlow(tile_size=(32, 32), name="TestProcessor")
         assert processor.name == "TestProcessor"
-        
+
         # Test default name
         processor2 = TileFlow(tile_size=(32, 32))
         assert processor2.name == "TileFlow"
@@ -125,7 +125,7 @@ class TestTileFlow:
         """Test basic processor functionality."""
         processor = TileFlow(tile_size=(32, 32))
         processor.configure(function=lambda x: x + 10)
-        
+
         image = np.zeros((64, 64))
         result = processor.run(image)
         assert np.allclose(result, 10.0)

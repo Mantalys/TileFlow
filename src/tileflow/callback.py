@@ -48,7 +48,7 @@ class ProcessingStats:
 
 class TileFlowCallback(ABC):
     """Enhanced base class for TileFlow processing callbacks.
-    
+
     Provides a comprehensive event system with lifecycle management,
     error handling, and rich context information. All methods are
     optional - subclasses only need to implement relevant events.
@@ -56,7 +56,7 @@ class TileFlowCallback(ABC):
 
     def on_processing_start(self, stats: ProcessingStats) -> None:
         """Called when processing begins.
-        
+
         Parameters
         ----------
         stats : ProcessingStats
@@ -66,7 +66,7 @@ class TileFlowCallback(ABC):
 
     def on_processing_end(self, stats: ProcessingStats) -> None:
         """Called when processing completes successfully.
-        
+
         Parameters
         ----------
         stats : ProcessingStats
@@ -76,7 +76,7 @@ class TileFlowCallback(ABC):
 
     def on_processing_error(self, error: Exception, stats: ProcessingStats) -> None:
         """Called when processing encounters an error.
-        
+
         Parameters
         ----------
         error : Exception
@@ -88,7 +88,7 @@ class TileFlowCallback(ABC):
 
     def on_chunk_start(self, chunk_index: int, total_chunks: int, chunk_shape: tuple) -> None:
         """Called when chunk processing begins.
-        
+
         Parameters
         ----------
         chunk_index : int
@@ -102,7 +102,7 @@ class TileFlowCallback(ABC):
 
     def on_chunk_end(self, chunk_index: int, total_chunks: int, chunk_shape: tuple) -> None:
         """Called when chunk processing completes.
-        
+
         Parameters
         ----------
         chunk_index : int
@@ -116,7 +116,7 @@ class TileFlowCallback(ABC):
 
     def on_tile_start(self, tile: ProcessedTile, tile_index: int, total_tiles: int) -> None:
         """Called when tile processing begins.
-        
+
         Parameters
         ----------
         tile : ProcessedTile
@@ -130,7 +130,7 @@ class TileFlowCallback(ABC):
 
     def on_tile_end(self, tile: ProcessedTile, tile_index: int, total_tiles: int) -> None:
         """Called when tile processing completes.
-        
+
         Parameters
         ----------
         tile : ProcessedTile
@@ -216,7 +216,7 @@ class ProgressCallback(TileFlowCallback):
 
 class MemoryTracker(TileFlowCallback):
     """Track memory usage during processing.
-    
+
     Monitors peak memory usage, memory per tile, and provides
     detailed memory statistics.
     """
@@ -253,8 +253,10 @@ class MemoryTracker(TileFlowCallback):
 
         if self.detailed:
             memory_delta = current - self._baseline_memory
-            print(f"   Memory: {self._format_bytes(current)} "
-                  f"(+{self._format_bytes(memory_delta)} from baseline)")
+            print(
+                f"   Memory: {self._format_bytes(current)} "
+                f"(+{self._format_bytes(memory_delta)} from baseline)"
+            )
 
     def on_processing_end(self, stats: ProcessingStats) -> None:
         """Display final memory statistics."""
@@ -266,10 +268,14 @@ class MemoryTracker(TileFlowCallback):
         final_delta = current - self._baseline_memory
 
         print("📊 Memory Usage Summary:")
-        print(f"   Peak memory: {self._format_bytes(self._peak_memory)} "
-              f"(+{self._format_bytes(peak_delta)} from baseline)")
-        print(f"   Final memory: {self._format_bytes(current)} "
-              f"(+{self._format_bytes(final_delta)} from baseline)")
+        print(
+            f"   Peak memory: {self._format_bytes(self._peak_memory)} "
+            f"(+{self._format_bytes(peak_delta)} from baseline)"
+        )
+        print(
+            f"   Final memory: {self._format_bytes(current)} "
+            f"(+{self._format_bytes(final_delta)} from baseline)"
+        )
 
         if self._memory_per_tile:
             avg_memory = np.mean(self._memory_per_tile)
@@ -293,7 +299,9 @@ class MemoryTracker(TileFlowCallback):
             "current_memory_bytes": current,
             "memory_per_tile_bytes": self._memory_per_tile.copy(),
             "peak_delta_bytes": self._peak_memory - self._baseline_memory,
-            "average_per_tile_bytes": np.mean(self._memory_per_tile) if self._memory_per_tile else 0
+            "average_per_tile_bytes": np.mean(self._memory_per_tile)
+            if self._memory_per_tile
+            else 0,
         }
 
     @staticmethod
@@ -308,14 +316,16 @@ class MemoryTracker(TileFlowCallback):
 
 class CodeCarbonTracker(TileFlowCallback):
     """Track energy consumption during processing using CodeCarbon.
-    
+
     Requires codecarbon to be installed: pip install codecarbon
     """
 
-    def __init__(self,
-                 project_name: str = "tileflow-processing",
-                 output_dir: str = "./carbon_logs",
-                 detailed: bool = False):
+    def __init__(
+        self,
+        project_name: str = "tileflow-processing",
+        output_dir: str = "./carbon_logs",
+        detailed: bool = False,
+    ):
         self.project_name = project_name
         self.output_dir = output_dir
         self.detailed = detailed
@@ -324,6 +334,7 @@ class CodeCarbonTracker(TileFlowCallback):
 
         try:
             from codecarbon import EmissionsTracker
+
             self._tracker_class = EmissionsTracker
             self._available = True
         except ImportError:
@@ -340,7 +351,7 @@ class CodeCarbonTracker(TileFlowCallback):
             project_name=self.project_name,
             output_dir=self.output_dir,
             save_to_file=True,
-            log_level="WARNING"  # Reduce noise
+            log_level="WARNING",  # Reduce noise
         )
         self._tracker.start()
 
@@ -360,7 +371,7 @@ class CodeCarbonTracker(TileFlowCallback):
             "processing_time_s": stats.elapsed_time or 0,
             "total_tiles": stats.processed_tiles,
             "input_shape": stats.input_shape,
-            "tile_size": stats.tile_size
+            "tile_size": stats.tile_size,
         }
 
         print("🌍 Carbon Footprint Summary:")
@@ -389,7 +400,7 @@ class CodeCarbonTracker(TileFlowCallback):
 
 class CompositeCallback(TileFlowCallback):
     """Compose multiple callbacks into a single callback.
-    
+
     Allows combining multiple monitoring callbacks (progress, memory, carbon)
     into a unified interface.
     """
@@ -398,11 +409,11 @@ class CompositeCallback(TileFlowCallback):
         self.callbacks = callbacks
         # Cache whether we have active listeners for performance
         self._has_tile_listeners = any(
-            hasattr(cb, 'on_tile_start') and callable(getattr(cb, 'on_tile_start'))
+            hasattr(cb, "on_tile_start") and callable(getattr(cb, "on_tile_start"))
             for cb in callbacks
         )
         self._has_chunk_listeners = any(
-            hasattr(cb, 'on_chunk_start') and callable(getattr(cb, 'on_chunk_start'))
+            hasattr(cb, "on_chunk_start") and callable(getattr(cb, "on_chunk_start"))
             for cb in callbacks
         )
 
@@ -458,7 +469,7 @@ class CompositeCallback(TileFlowCallback):
 
 class MetricsCallback(TileFlowCallback):
     """Comprehensive metrics collection callback.
-    
+
     Combines progress tracking, timing, and basic system metrics
     in a single convenient callback.
     """
@@ -502,8 +513,10 @@ class MetricsCallback(TileFlowCallback):
                 avg_tile_time = np.mean(self._tile_times)
                 min_tile_time = np.min(self._tile_times)
                 max_tile_time = np.max(self._tile_times)
-                print(f"   Tile timing - avg: {avg_tile_time:.3f}s, "
-                      f"min: {min_tile_time:.3f}s, max: {max_tile_time:.3f}s")
+                print(
+                    f"   Tile timing - avg: {avg_tile_time:.3f}s, "
+                    f"min: {min_tile_time:.3f}s, max: {max_tile_time:.3f}s"
+                )
 
     def get_detailed_metrics(self) -> dict[str, Any]:
         """Get comprehensive metrics data."""
@@ -515,5 +528,5 @@ class MetricsCallback(TileFlowCallback):
             "chunk_times_s": self._chunk_times.copy(),
             "average_tile_time_s": np.mean(self._tile_times) if self._tile_times else 0,
             "input_shape": self.stats.input_shape,
-            "output_shape": self.stats.output_shape
+            "output_shape": self.stats.output_shape,
         }

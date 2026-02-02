@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "tileflow"
-version = "0.6.0"
+version = "0.7.2"
 description = "Fast, memory-efficient image tiling and reconstruction for deep learning and scientific computing"
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -17,7 +17,7 @@ maintainers = [
 ]
 keywords = [
     "image-processing",
-    "tiling", 
+    "tiling",
     "deep-learning",
     "scientific-computing",
     "computer-vision",
@@ -40,7 +40,10 @@ classifiers = [
 ]
 
 dependencies = [
+    "matplotlib>=3.10.7",
     "numpy>=2.2.0",
+    "opencv-python>=4.11.0.86",
+    "scikit-image>=0.25.2",
     "zarr>=3.1.1",
 ]
 
@@ -79,7 +82,7 @@ dev = [
 ]
 test = [
     "pytest>=8.4.1",
-    "pytest-cov>=6.0.0", 
+    "pytest-cov>=6.0.0",
     "pytest-mock>=3.12.0",
     "hypothesis>=6.100.0",
 ]
@@ -87,7 +90,7 @@ test = [
 [tool.hatch.build]
 include = [
     "src/tileflow/**/*.py",
-    "README.md", 
+    "README.md",
     "LICENSE",
     "CHANGELOG.md",
 ]
@@ -111,7 +114,7 @@ packages = ["src/tileflow"]
 [tool.hatch.build.targets.sdist]
 include = [
     "src/",
-    "tests/", 
+    "tests/",
     "scripts/",
     "README.md",
     "LICENSE",
@@ -127,7 +130,7 @@ line-length = 100
 target-version = "py313"
 preview = true
 extend-exclude = [
-    "docs/", 
+    "docs/",
     "scripts/",
     ".git/",
     "__pycache__/",
@@ -137,7 +140,7 @@ extend-exclude = [
 [tool.ruff.lint]
 select = [
     "E",      # pycodestyle errors
-    "W",      # pycodestyle warnings  
+    "W",      # pycodestyle warnings
     "F",      # pyflakes
     "I",      # isort
     "UP",     # pyupgrade
@@ -197,7 +200,7 @@ extend-exclude = '''
 )/
 '''
 
-# isort configuration  
+# isort configuration
 [tool.isort]
 profile = "black"
 line_length = 100
@@ -228,7 +231,7 @@ strict_equality = true
 [[tool.mypy.overrides]]
 module = [
     "zarr.*",
-    "codecarbon.*", 
+    "codecarbon.*",
     "psutil.*",
 ]
 ignore_missing_imports = true
@@ -241,7 +244,7 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = [
     "--strict-markers",
-    "--strict-config", 
+    "--strict-config",
     "--verbose",
     "--tb=short",
     "--cov=src/tileflow",
@@ -276,7 +279,7 @@ exclude_lines = [
     "pragma: no cover",
     "def __repr__",
     "def __str__",
-    "raise AssertionError", 
+    "raise AssertionError",
     "raise NotImplementedError",
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",
@@ -285,4 +288,3 @@ exclude_lines = [
 show_missing = true
 precision = 2
 skip_covered = false
-
