@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "tileflow"
-version = "0.7.2"
+version = "0.7.4"
 description = "Fast, memory-efficient image tiling and reconstruction for deep learning and scientific computing"
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -40,27 +40,8 @@ classifiers = [
 ]
 
 dependencies = [
-    "matplotlib>=3.10.7",
     "numpy>=2.2.0",
-    "opencv-python>=4.11.0.86",
     "scikit-image>=0.25.2",
-    "zarr>=3.1.1",
-]
-
-[project.optional-dependencies]
-monitoring = [
-    "codecarbon>=2.4.0",  # Energy consumption tracking
-    "psutil>=5.9.0",      # System monitoring
-]
-
-benchmarks = [
-    "matplotlib>=3.8.0",
-    "seaborn>=0.13.0",
-    "pandas>=2.2.0",
-    "scikit-image>=0.22.0",
-]
-all = [
-    "tileflow[monitoring,benchmarks]",
 ]
 
 [project.urls]
