@@ -2,12 +2,11 @@
 
 import numpy as np
 
-from tileflow.core import Image2D, ProcessedTile, new_image2d
+from tileflow.core import Image2D, ProcessedTile
 
 
 def reconstruct(tiles: list[ProcessedTile], region_shape: tuple[int, int]) -> list[Image2D]:
     """Reconstruct full image from processed tiles."""
-    print(f"Reconstructing image of shape: {region_shape} from {len(tiles)} tiles")
     height_reconstructed, width_reconstructed = region_shape
     last_tile = tiles[-1]
     # Handle both single array and list of arrays
