@@ -47,7 +47,7 @@ class TileFlowMasked:
         chunk_size: tuple[int, int] | None = None,
         chunk_overlap: tuple[int, int] = (0, 0),
         optimize=True,
-        normalize=True,
+        normalize_range: tuple | None = None,
     ):
         self.tile_size = tile_size
         self.tile_overlap = tile_overlap
@@ -59,7 +59,7 @@ class TileFlowMasked:
         self.level = None
         self.channels = None
         self.optimize = optimize
-        self.normalize = normalize
+        self.normalize_range = normalize_range
 
     def configure(
         self,
@@ -99,12 +99,16 @@ class TileFlowMasked:
             result = self._process_by_tiles(array, mask)
         return result
 
+    def normalize_mi_ma(self, x, mi, ma):
+        eps = 1e-10
+        return (x - mi) / (ma - mi + eps)
+
     def _process_by_tiles(
         self, array: np.ndarray, mask: np.ndarray | None = None, return_tiles: bool = False
     ) -> np.ndarray | list[ProcessedTile]:
         """Process with direct tiling (no chunking)."""
-        if self.normalize:
-            array = rescale_intensity(array, out_range=(0, 1))
+        if self.normalize_range:
+            array = self.normalize_mi_ma(array, *self.normalize_range)
         region_shape = array.shape
         grid_spec = GridSpec(size=self.tile_size, overlap=self.tile_overlap)
         tile_specs = list(grid_spec.build_grid(region_shape))
