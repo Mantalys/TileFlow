@@ -1,4 +1,4 @@
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 from collections.abc import Callable
 from typing import Any
 
@@ -9,7 +9,7 @@ from tileflow.reconstruction import reconstruct_tiles
 from tileflow.tiling import GridSpec
 
 
-class MaskedStreamable:
+class MaskedStreamable(ABC):
     """Abstract base class for masked streamable image data."""
 
     @abstractmethod
@@ -39,7 +39,6 @@ class TileFlowMasked:
         chunk_size: TupleInt2 | None = None,
         chunk_overlap: TupleInt2 = (0, 0),
         consider_mask=True,
-        normalize_range: TupleInt2 | None = None,
     ):
         self.tile_size = tile_size
         self.tile_overlap = tile_overlap
@@ -54,7 +53,12 @@ class TileFlowMasked:
         self.thresholds = []
         self.rescale_ranges = []
 
-    def add_channel(self, channel_index: int, threshold: int | float | None = None, rescale_range: TupleInt2 | None = None) -> None:
+    def add_channel(
+        self,
+        channel_index: int,
+        threshold: int | float | None = None,
+        rescale_range: TupleInt2 | None = None,
+    ) -> None:
         if channel_index in self.channel_indices:
             raise ValueError(f"Channel index {channel_index} is already added")
         self.channel_indices.append(channel_index)
@@ -65,7 +69,7 @@ class TileFlowMasked:
         self,
         level: int,
         function: Callable,
-        chunk_function: Callable,
+        chunk_function: Callable | None = None
     ) -> None:
         if self.channel_indices is None or self.thresholds is None or self.rescale_ranges is None:
             raise RuntimeError("Channels must be added before setup")
@@ -83,7 +87,7 @@ class TileFlowMasked:
     def run(self, streamable: MaskedStreamable) -> Any:
         if not self._configured:
             raise RuntimeError(
-                f"Processor must be configured before use. Call processor.configure(function=fn)"
+                f"Processor must be configured before use. Call processor.setup(function=fn)"
             )
         # Implementation of run method for masked streamable
         if self.chunk_size is not None:
@@ -93,14 +97,22 @@ class TileFlowMasked:
             if len(self.channel_indices) == 1:
                 # case: single channel, array shape is (H, W)
                 array = streamable.read_raster(self.level, self.channel_indices)
-                if np.max(array) < self.thresholds[0]:
+                if self.thresholds and np.max(array) < self.thresholds[0]:
                     # consider the chunk empty
                     return None
-                mask = streamable.read_mask_region(self.level, 0, array.shape[0], 0, array.shape[1])
+                if array.ndim == 2:
+                    array = array[None, :, :]
+
             else:
                 # case: multiple channels, array shape is (C, H, W)
                 array = streamable.read_raster(self.level, self.channel_indices)
-                mask = streamable.read_mask_region(self.level, 0, array.shape[1], 0, array.shape[2])
+            if array.ndim != 3:
+                raise ValueError(f"Expected array of shape (C, H, W), got {array.shape}")
+            mask = (
+                streamable.read_mask_region(self.level, 0, array.shape[1], 0, array.shape[2])
+                if self.consider_mask
+                else None
+            )
             result = self._process_by_tiles(array, mask)
         return result
 
@@ -109,10 +121,7 @@ class TileFlowMasked:
         return (x - mi) / (ma - mi + eps)
 
     def _process_by_tiles(
-        self,
-        array: np.ndarray,
-        mask: np.ndarray | None = None,
-        return_tiles: bool = False
+        self, array: np.ndarray, mask: np.ndarray | None = None, return_tiles: bool = False
     ) -> np.ndarray | list[ProcessedTile]:
         """Process with direct tiling (no chunking)."""
         if len(array.shape) == 2:
@@ -126,9 +135,10 @@ class TileFlowMasked:
         n_channels, region_h, region_w = array.shape
 
         for i in range(n_channels):
-            vmin, vmax = self.rescale_ranges[i]
-            if vmin is not None and vmax is not None:
-                array[i] = self.normalize_mi_ma(array[i], vmin, vmax)
+            if self.rescale_ranges[i] is not None:
+                vmin, vmax = self.rescale_ranges[i]
+                if vmin is not None and vmax is not None:
+                    array[i] = self.normalize_mi_ma(array[i], vmin, vmax)
 
         grid_spec = GridSpec(size=self.tile_size, overlap=self.tile_overlap)
 

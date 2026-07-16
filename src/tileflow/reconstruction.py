@@ -3,8 +3,12 @@ import numpy as np
 from tileflow.core import Image2D, ProcessedTile
 
 
-def reconstruct_tiles(tiles: list[ProcessedTile], height_reconstructed, width_reconstructed) -> list[Image2D]:
+def reconstruct_tiles(
+    tiles: list[ProcessedTile], height_reconstructed, width_reconstructed
+) -> list[Image2D]:
     """Reconstruct full image from processed tiles."""
+    if not tiles:
+        return []
     last_tile = tiles[-1]
     # Handle both single array and list of arrays
     if isinstance(last_tile.image_data, list):

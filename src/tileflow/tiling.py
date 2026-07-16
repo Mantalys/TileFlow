@@ -16,6 +16,7 @@ def _edges_from_index(index: TupleInt2, grid_shape: TupleInt2) -> BoundaryEdges:
         bottom=(row == n_rows - 1),
     )
 
+
 @dataclass(frozen=True)
 class GridSpec:
     """Specification for grid-based image tiling.
