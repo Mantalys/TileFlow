@@ -4,9 +4,20 @@ from typing import Any
 
 import numpy as np
 
-from tileflow.core import ProcessedTile, TupleInt2
+from tileflow.core import ProcessedTile, TupleInt2, TileSpec
 from tileflow.reconstruction import reconstruct_tiles
 from tileflow.tiling import GridSpec
+
+
+TileProcessor = Callable[
+    [np.ndarray, TileSpec],
+    np.ndarray | None,
+]
+
+ChunkSink = Callable[
+    [np.ndarray, TileSpec],
+    None,
+]
 
 
 class MaskedStreamable(ABC):
@@ -45,8 +56,8 @@ class TileFlowMasked:
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
         self.consider_mask = consider_mask
-        self._processor = None
-        self._chunk_processor = None
+        self._tile_processor = None
+        self._chunk_sink = None
         self._configured = False
         self.level = 0
         self.channel_indices = []
@@ -63,25 +74,28 @@ class TileFlowMasked:
             raise ValueError(f"Channel index {channel_index} is already added")
         self.channel_indices.append(channel_index)
         self.thresholds.append(threshold)
+        # check the range is strictly ordered
+        if rescale_range is not None and rescale_range[0] >= rescale_range[1]:
+            raise ValueError("rescale_range must be ordered (min < max), got {rescale_range}")
         self.rescale_ranges.append(rescale_range)
 
     def setup(
         self,
         level: int,
-        function: Callable,
-        chunk_function: Callable | None = None
+        tile_processor: TileProcessor,
+        chunk_sink: ChunkSink | None = None,
     ) -> None:
-        if self.channel_indices is None or self.thresholds is None or self.rescale_ranges is None:
-            raise RuntimeError("Channels must be added before setup")
+        if not self.channel_indices:
+            raise RuntimeError("At least one channel must be added before setup")
 
-        if not callable(function):
+        if not callable(tile_processor):
             raise TypeError("function must be callable")
-        if chunk_function is not None and not callable(chunk_function):
+        if chunk_sink is not None and not callable(chunk_sink):
             raise TypeError("chunk_function must be callable")
 
         self.level = level
-        self._processor = function
-        self._chunk_processor = chunk_function
+        self._tile_processor = tile_processor
+        self._chunk_sink = chunk_sink
         self._configured = True
 
     def run(self, streamable: MaskedStreamable) -> Any:
@@ -97,7 +111,7 @@ class TileFlowMasked:
             if len(self.channel_indices) == 1:
                 # case: single channel, array shape is (H, W)
                 array = streamable.read_raster(self.level, self.channel_indices)
-                if self.thresholds and np.max(array) < self.thresholds[0]:
+                if self.thresholds[0] is not None and np.max(array) < self.thresholds[0]:
                     # consider the chunk empty
                     return None
                 if array.ndim == 2:
@@ -117,8 +131,8 @@ class TileFlowMasked:
         return result
 
     def normalize_mi_ma(self, x: np.ndarray, mi: float, ma: float) -> np.ndarray:
-        eps = 1e-6
-        return (x - mi) / (ma - mi + eps)
+        # assume mi < ma and handle division by zero
+        return np.clip((x - mi) / (ma - mi), 0, 1)
 
     def _process_by_tiles(
         self, array: np.ndarray, mask: np.ndarray | None = None, return_tiles: bool = False
@@ -157,7 +171,11 @@ class TileFlowMasked:
                 # multiply tile region by mask to apply mask, on each channel
                 tile_region = tile_region * tile_mask
 
-            tile_processed = self._processor(tile_region, tile_spec)
+            if tile_region.ndim != 3:
+                raise ValueError("tile_region must be (C, H, W), got {}".format(tile_region.shape))
+            tile_processed = self._tile_processor(tile_region, tile_spec)
+            if tile_processed.ndim != 3:
+                raise ValueError("tile_processed must be (C, H, W), got {}".format(tile_processed.shape))
             tiles.append(ProcessedTile(tile_spec=tile_spec, image_data=tile_processed))
 
         if return_tiles:
@@ -184,7 +202,7 @@ class TileFlowMasked:
             chunk_region = streamable.read_region(self.level, self.channel_indices, y0, y1, x0, x1)
 
             if len(self.channel_indices) == 1:
-                if np.max(chunk_region) < self.thresholds[0]:
+                if self.thresholds[0] is not None and np.max(chunk_region) < self.thresholds[0]:
                     # consider the chunk empty
                     continue
 
@@ -195,5 +213,5 @@ class TileFlowMasked:
                 chunk_output = chunk_output * chunk_mask
 
             # Apply chunk processor if provided
-            if self._chunk_processor:
-                self._chunk_processor(chunk_output, chunk_spec)
+            if self._chunk_sink:
+                self._chunk_sink(chunk_output, chunk_spec)
