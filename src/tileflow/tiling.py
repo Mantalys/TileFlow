@@ -13,8 +13,19 @@ seamless reconstruction without processing artifacts.
 from collections.abc import Iterator
 from dataclasses import dataclass
 from functools import lru_cache
+from tileflow.core import BBox, BoundaryEdges, TileGeometry, TilePosition, TileSpec, TupleInt2
 
-from tileflow.core import BBox, BoundaryEdges, TileGeometry, TilePosition, TileSpec
+
+def _edges_from_index(index: TupleInt2, grid_shape: TupleInt2) -> BoundaryEdges:
+    """Determine which edges are at the boundary for a given grid index."""
+    row, col = index
+    n_rows, n_cols = grid_shape
+    return BoundaryEdges(
+        left=(col == 0),
+        right=(col == n_cols - 1),
+        top=(row == 0),
+        bottom=(row == n_rows - 1),
+    )
 
 
 @dataclass(frozen=True)
