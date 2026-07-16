@@ -1,3 +1,15 @@
+"""Core data structures for image tiling and spatial region management.
+
+This module provides the fundamental building blocks for TileFlow's tiling system:
+- BBox: Immutable bounding box operations
+- RegionEdges: Boundary detection for grid edges
+- RegionGeometry: Core and halo region specifications
+- RegionSpec: Complete tile specification with position and geometry
+- RegionImage: Container for processed tile data
+
+All structures use NamedTuple for performance and immutability.
+"""
+
 from typing import NamedTuple, Optional
 
 import numpy as np
@@ -5,7 +17,19 @@ import numpy as np
 # Support both 2D and multi-dimensional images
 Image2D = np.ndarray
 ImageData = np.ndarray  # More general type for multi-dimensional data
-TupleInt2 = tuple[int, int]
+
+
+def new_image2d(shape: tuple[int, int], dtype: np.dtype = np.float32) -> Image2D:
+    """Create a new 2D image with the specified shape and dtype."""
+    return np.zeros(shape, dtype=dtype)
+
+
+def new_image(shape: tuple[int, ...], dtype: np.dtype = np.float32) -> ImageData:
+    """Create a new image with the specified shape and dtype.
+
+    Supports both 2D (H, W) and 3D (C, H, W) images.
+    """
+    return np.zeros(shape, dtype=dtype)
 
 
 class BoundaryEdges(NamedTuple):
