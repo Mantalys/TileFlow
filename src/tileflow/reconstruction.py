@@ -1,5 +1,4 @@
 import numpy as np
-
 from tileflow.core import Image2D, ProcessedTile
 
 
