@@ -1,7 +1,6 @@
 from collections.abc import Iterator
 from dataclasses import dataclass
 from functools import lru_cache
-
 from tileflow.core import BBox, BoundaryEdges, TileGeometry, TilePosition, TileSpec, TupleInt2
 
 
