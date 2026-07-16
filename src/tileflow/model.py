@@ -12,9 +12,8 @@ from collections.abc import Callable
 from typing import Any
 
 import numpy as np
-
-from tileflow.core import ProcessedTile
-from tileflow.reconstruction import reconstruct
+from tileflow.core import ProcessedTile, TupleInt2, TileSpec
+from tileflow.reconstruction import reconstruct_tiles
 from tileflow.tiling import GridSpec
 
 

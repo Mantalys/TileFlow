@@ -11,7 +11,6 @@ All structures use NamedTuple for performance and immutability.
 """
 
 from typing import NamedTuple, Optional
-
 import numpy as np
 
 # Support both 2D and multi-dimensional images
