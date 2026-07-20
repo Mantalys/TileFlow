@@ -137,12 +137,12 @@ class TileFlowMasked:
         self, array: np.ndarray, mask: np.ndarray | None = None, return_tiles: bool = False
     ) -> np.ndarray | list[ProcessedTile]:
         """Process with direct tiling (no chunking)."""
-        if len(array.shape) == 2:
+        if array.ndim == 2:
             array = array[np.newaxis, :, :]
         # now assume shape is (C, H, W)
-        if len(array.shape) != 3:
+        if array.ndim != 3:
             raise ValueError(f"Expected array shape (C, H, W), got {array.shape}")
-        if mask is not None and len(mask.shape) != 2:
+        if mask is not None and mask.ndim != 2:
             raise ValueError(f"Expected mask shape (H, W), got {mask.shape}")
 
         n_channels, region_h, region_w = array.shape
@@ -156,7 +156,7 @@ class TileFlowMasked:
         grid_spec = GridSpec(size=self.tile_size, overlap=self.tile_overlap)
 
         tiles: list[ProcessedTile] = []
-        for tile_spec in grid_spec.build_grid(region_h, region_w):
+        for tile_spec in grid_spec.iter_tiles(region_h, region_w):
             x0, x1 = tile_spec.geometry.halo.x0, tile_spec.geometry.halo.x1
             y0, y1 = tile_spec.geometry.halo.y0, tile_spec.geometry.halo.y1
             tile_mask = mask[y0:y1, x0:x1] if mask is not None else None
@@ -173,8 +173,7 @@ class TileFlowMasked:
             if tile_region.ndim != 3:
                 raise ValueError("tile_region must be (C, H, W), got {}".format(tile_region.shape))
             tile_processed = self._tile_processor(tile_region, tile_spec)
-            if tile_processed.ndim != 3:
-                raise ValueError("tile_processed must be (C, H, W), got {}".format(tile_processed.shape))
+
             tiles.append(ProcessedTile(tile_spec=tile_spec, image_data=tile_processed))
 
         if return_tiles:
@@ -188,7 +187,7 @@ class TileFlowMasked:
         shape = streamable.get_shape_hw()
         chunk_grid_spec = GridSpec(size=self.chunk_size, overlap=self.chunk_overlap)
 
-        for chunk_spec in chunk_grid_spec.build_grid(shape[0], shape[1]):
+        for chunk_spec in chunk_grid_spec.iter_tiles(shape[0], shape[1]):
             x0, x1 = chunk_spec.geometry.halo.x0, chunk_spec.geometry.halo.x1
             y0, y1 = chunk_spec.geometry.halo.y0, chunk_spec.geometry.halo.y1
             chunk_mask = streamable.read_mask_region(self.level, y0, y1, x0, x1)

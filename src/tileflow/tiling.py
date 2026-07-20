@@ -1,6 +1,5 @@
 from collections.abc import Iterator
 from dataclasses import dataclass
-from functools import lru_cache
 from tileflow.core import BBox, BoundaryEdges, TileGeometry, TilePosition, TileSpec, TupleInt2
 
 
@@ -34,15 +33,22 @@ class GridSpec:
     overlap: TupleInt2  # (height, width) - overlap/padding around region
     origin: TupleInt2 = (0, 0)  # (y, x) origin offset
 
-    @lru_cache(maxsize=128)
     def grid_shape(self, shape: TupleInt2) -> TupleInt2:
         """Calculate grid dimensions (rows, cols) for the given image shape."""
         H, W = shape[:2]
-        n_rows = H // self.size[0] + (1 if H % self.size[0] > self.size[0] // 2 else 0)
-        n_cols = W // self.size[1] + (1 if W % self.size[1] > self.size[1] // 2 else 0)
+        if H <= 0 or W <= 0:
+            raise ValueError("Image shape must be positive")
+        if H < self.size[0]:
+            n_rows = 1
+        else:
+            n_rows = H // self.size[0] + (1 if H % self.size[0] > self.size[0] // 2 else 0)
+        if W < self.size[1]:
+            n_cols = 1
+        else:
+            n_cols = W // self.size[1] + (1 if W % self.size[1] > self.size[1] // 2 else 0)
         return (n_rows, n_cols)
 
-    def build_grid(self, region_height: int, region_width: int) -> Iterator[TileSpec]:
+    def iter_tiles(self, region_height: int, region_width: int) -> Iterator[TileSpec]:
         """Generate tile specifications for processing the image."""
         grid_shape = self.grid_shape((region_height, region_width))
         rh, rw = self.size
