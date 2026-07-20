@@ -1,5 +1,6 @@
-from typing import NamedTuple, Optional
+from typing import Optional
 import numpy as np
+from dataclasses import dataclass
 
 # Support both 2D and multi-dimensional images
 Image2D = np.ndarray
@@ -7,7 +8,8 @@ ImageData = np.ndarray  # More general type for multi-dimensional data
 TupleInt2 = tuple[int, int]
 
 
-class BoundaryEdges(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class BoundaryEdges:
     """Immutable representation of tile boundary flags.
 
     Indicates which edges of a tile are at the boundary of the image grid.
@@ -20,7 +22,8 @@ class BoundaryEdges(NamedTuple):
     bottom: bool
 
 
-class BBox(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class BBox:
     """Immutable bounding box [x0:x1, y0:y1] with geometric operations.
 
     Using NamedTuple for memory efficiency and fast operations.
@@ -31,7 +34,18 @@ class BBox(NamedTuple):
     x1: int
     y1: int
 
-    # Convenience
+    def __post_init__(self):
+        if self.x0 < 0 or self.y0 < 0 or self.x1 < 0 or self.y1 < 0:
+            raise ValueError(
+                "Invalid BBox: expected non-negative coordinates, "
+                f"got ({self.x0}, {self.y0}, {self.x1}, {self.y1})"
+            )
+        if self.x0 > self.x1 or self.y0 > self.y1:
+            raise ValueError(
+                "Invalid BBox: expected x0 <= x1 and y0 <= y1, "
+                f"got ({self.x0}, {self.y0}, {self.x1}, {self.y1})"
+            )
+
     @property
     def height(self) -> int:
         return self.y1 - self.y0
@@ -52,6 +66,10 @@ class BBox(NamedTuple):
         return cls(x, y, x + w, y + h)
 
     def translate(self, dy: int = 0, dx: int = 0) -> "BBox":
+        if self.x0 + dx < 0:
+            dx = -self.x0
+        if self.y0 + dy < 0:
+            dy = -self.y0
         return BBox(self.x0 + dx, self.y0 + dy, self.x1 + dx, self.y1 + dy)
 
     def clamp_to(self, H: int, W: int) -> "BBox":
@@ -66,9 +84,17 @@ class BBox(NamedTuple):
     def contains(self, x: int, y: int) -> bool:
         return self.x0 <= x < self.x1 and self.y0 <= y < self.y1
 
+    def encloses(self, other: "BBox") -> bool:
+        return (
+            self.x0 <= other.x0
+            and self.y0 <= other.y0
+            and other.x1 <= self.x1
+            and other.y1 <= self.y1
+        )
+
     def intersects(self, other: "BBox") -> bool:
-        return not (
-            self.x1 <= other.x0 or self.x0 >= other.x1 or self.y1 <= other.y0 or self.y0 >= other.y1
+        return max(self.x0, other.x0) < min(self.x1, other.x1) and max(self.y0, other.y0) < min(
+            self.y1, other.y1
         )
 
     def intersection(self, other: "BBox") -> Optional["BBox"]:
@@ -82,10 +108,20 @@ class BBox(NamedTuple):
         )
 
     def expand(self, left: int = 0, right: int = 0, top: int = 0, bottom: int = 0) -> "BBox":
-        return BBox(self.x0 - left, self.y0 - top, self.x1 + right, self.y1 + bottom)
+        if self.x0 - left < 0:
+            left = 0
+        else:
+            left = self.x0 - left
+        if self.y0 - top < 0:
+            top = 0
+        else:
+            top = self.y0 - top
+
+        return BBox(left, top, self.x1 + right, self.y1 + bottom)
 
 
-class TileGeometry(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class TileGeometry:
     """Tile geometry specification with core and halo regions.
 
     The core region is the area of interest for reconstruction,
@@ -95,27 +131,44 @@ class TileGeometry(NamedTuple):
     core: BBox
     halo: BBox
 
+    def __post_init__(self) -> None:
+        if not self.halo.encloses(self.core):
+            raise ValueError(f"Core BBox {self.core} must be enclosed by halo BBox {self.halo}")
+
+    @property
+    def core_in_halo(self) -> BBox:
+        return BBox(
+            x0=self.core.x0 - self.halo.x0,
+            y0=self.core.y0 - self.halo.y0,
+            x1=self.core.x1 - self.halo.x0,
+            y1=self.core.y1 - self.halo.y0,
+        )
+
     def get_slices(self) -> tuple[slice, slice]:
         return self.core.get_slices()
 
     def get_halo_slices(self) -> tuple[slice, slice]:
         return self.halo.get_slices()
 
+    def core_in_halo_slices(self) -> tuple[slice, slice]:
+        return self.core_in_halo.get_slices()
+
     def contains(self, x: int, y: int) -> bool:
         return self.core.contains(x, y)
 
 
-class TilePosition(NamedTuple):
-    """Position of a tile in the processing grid.
+@dataclass(frozen=True, slots=True)
+class GridIndex:
+    row: int
+    column: int
 
-    Contains both grid coordinates and boundary edge information.
-    """
-
-    position: tuple[int, int]  # (row, column) in the grid
-    edges: BoundaryEdges
+    def __post_init__(self) -> None:
+        if self.row < 0 or self.column < 0:
+            raise ValueError("Grid indices must be non-negative")
 
 
-class TileSpec(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class TileSpec:
     """Complete specification of a tile in the processing grid.
 
     Combines geometry (core and halo bounding boxes) with position
@@ -123,7 +176,8 @@ class TileSpec(NamedTuple):
     """
 
     geometry: TileGeometry
-    position: TilePosition
+    position: GridIndex  # (row, column) in the grid
+    edges: BoundaryEdges
 
     def get_slices(self) -> tuple[slice, slice]:
         return self.geometry.get_slices()
@@ -134,6 +188,14 @@ class TileSpec(NamedTuple):
     def contains(self, x: int, y: int) -> bool:
         return self.geometry.contains(x, y)
 
+    @property
+    def row(self) -> int:
+        return self.position.row
+
+    @property
+    def column(self) -> int:
+        return self.position.column
+
 
 class ProcessedTile:
     """Container for processed image data associated with a specific tile.
@@ -142,91 +204,35 @@ class ProcessedTile:
     enabling proper reconstruction and spatial referencing.
     """
 
-    def __init__(self, tile_spec: TileSpec, image_data: list[Image2D] | Image2D) -> None:
+    def __init__(self, tile_spec: TileSpec, data: np.ndarray) -> None:
         """Initialize processed tile.
 
         Parameters
         ----------
         tile_spec : TileSpec
             Specification of the tile
-        image_data : list[Image2D] | Image2D
-            Processed image data for this tile
+        data : np.ndarray
+            Processed data for this tile
         """
         self.tile_spec = tile_spec
-        self.image_data: list[Image2D] = (
-            image_data if isinstance(image_data, list) else [image_data]
-        )
+        if type(data) is not np.ndarray:
+            data = np.asarray(data)
+        self._data = data
 
-    @property
-    def x_start(self) -> int:
-        return self.tile_spec.geometry.halo.x0
-
-    @property
-    def y_start(self) -> int:
-        return self.tile_spec.geometry.halo.y0
-
-    @property
-    def core_bbox(self) -> BBox:
-        return self.tile_spec.geometry.core
-
-    def only_core_image(self) -> list[Image2D]:
+    def only_core_data(self) -> np.ndarray:
         """Extract the core part of the processed tile data."""
-        core_bbox = self.tile_spec.geometry.core
-        halo_bbox = self.tile_spec.geometry.halo
-        # Crop the image data corresponding to the core bbox
-        if self.image_data is None:
-            return None
-        if halo_bbox.x0 >= halo_bbox.x1 or halo_bbox.y0 >= halo_bbox.y1:
-            return np.zeros((0, 0), dtype=self.image_data.dtype)
-        if core_bbox.x0 >= core_bbox.x1 or core_bbox.y0 >= core_bbox.y1:
-            return np.zeros((0, 0), dtype=self.image_data.dtype)
-        # Calculate the crop indices
-        # Note: We assume the image_data is large enough to accommodate the core bbox
-        if (
-            core_bbox.x0 < halo_bbox.x0
-            or core_bbox.x1 > halo_bbox.x1
-            or core_bbox.y0 < halo_bbox.y0
-            or core_bbox.y1 > halo_bbox.y1
-        ):
-            raise ValueError("Core bbox must be within the halo bbox.")
-        # Crop the image data to get the core part
-        # This assumes the image_data is large enough to accommodate the core bbox
 
-        # Calculate relative slice indices
-        rel_y0 = core_bbox.y0 - halo_bbox.y0
-        rel_y1 = core_bbox.y1 - halo_bbox.y0
-        rel_x0 = core_bbox.x0 - halo_bbox.x0
-        rel_x1 = core_bbox.x1 - halo_bbox.x0
+        slice_y, slice_x = self.tile_spec.geometry.core_in_halo_slices()
 
-        # Handle different data formats
-        if isinstance(self.image_data, list):
-            # List of arrays (could be 2D or 3D)
-            result = []
-            for img in self.image_data:
-                if img.ndim == 2:
-                    result.append(img[rel_y0:rel_y1, rel_x0:rel_x1])
-                elif img.ndim == 3:
-                    result.append(img[:, rel_y0:rel_y1, rel_x0:rel_x1])
-                else:
-                    # Higher dimensions - extract spatial region from last 2 dims
-                    spatial_slice = tuple(
-                        [slice(None)] * (img.ndim - 2)
-                        + [slice(rel_y0, rel_y1), slice(rel_x0, rel_x1)]
-                    )
-                    result.append(img[spatial_slice])
-            return result
-        # Single array (could be 2D or 3D)
-        elif self.image_data.ndim == 2:
-            # Single 2D array
-            return [self.image_data[rel_y0:rel_y1, rel_x0:rel_x1]]
-        elif self.image_data.ndim == 3:
-            # 3D array (C, H, W) - extract spatial region from all channels
-            extracted = self.image_data[:, rel_y0:rel_y1, rel_x0:rel_x1]
-            return [extracted]
-        else:
-            # Higher dimensions - extract spatial region from last 2 dims
-            spatial_slice = tuple(
-                [slice(None)] * (self.image_data.ndim - 2)
-                + [slice(rel_y0, rel_y1), slice(rel_x0, rel_x1)]
-            )
-            return [self.image_data[spatial_slice]]
+        match self._data.ndim:
+            case 1:
+                # Single 1D array
+                return self._data
+            case 2:
+                # Single 2D array
+                return self._data[slice_y, slice_x]
+            case 3:
+                # 3D array (C, H, W) - extract spatial region from all channels
+                return self._data[:, slice_y, slice_x]
+            case _:
+                raise ValueError(f"Unsupported data dimension: {self._data.ndim}")

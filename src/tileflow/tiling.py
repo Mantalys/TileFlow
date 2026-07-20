@@ -1,6 +1,6 @@
 from collections.abc import Iterator
 from dataclasses import dataclass
-from tileflow.core import BBox, BoundaryEdges, TileGeometry, TilePosition, TileSpec, TupleInt2
+from tileflow.core import BBox, BoundaryEdges, TileGeometry, TileSpec, TupleInt2, GridIndex
 
 
 def _edges_from_index(index: TupleInt2, grid_shape: TupleInt2) -> BoundaryEdges:
@@ -100,5 +100,4 @@ class GridSpec:
                 tile_bbox = BBox(tile_x_start, tile_y_start, tile_x_end, tile_y_end)
 
                 geometry = TileGeometry(core=region_bbox, halo=tile_bbox)
-                position = TilePosition(position=(row, col), edges=edges)
-                yield TileSpec(geometry=geometry, position=position)
+                yield TileSpec(geometry=geometry, position=GridIndex(row, col), edges=edges)

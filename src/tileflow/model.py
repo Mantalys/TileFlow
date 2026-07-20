@@ -10,7 +10,7 @@ from tileflow.tiling import GridSpec
 
 TileProcessor = Callable[
     [np.ndarray, TileSpec],
-    np.ndarray | None,
+    np.ndarray,
 ]
 
 ChunkSink = Callable[
@@ -174,7 +174,7 @@ class TileFlowMasked:
                 raise ValueError("tile_region must be (C, H, W), got {}".format(tile_region.shape))
             tile_processed = self._tile_processor(tile_region, tile_spec)
 
-            tiles.append(ProcessedTile(tile_spec=tile_spec, image_data=tile_processed))
+            tiles.append(ProcessedTile(tile_spec=tile_spec, data=tile_processed))
 
         if return_tiles:
             return tiles
