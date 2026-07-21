@@ -175,12 +175,16 @@ class TileFlowMasked:
             tile_processed = self._tile_processor(tile_region, tile_spec)
 
             tiles.append(ProcessedTile(tile_spec=tile_spec, data=tile_processed))
-
+        if not tiles:
+            raise ValueError("No tiles processed")
         if return_tiles:
             return tiles
 
-        reconstructed = reconstruct_tiles(tiles, region_h, region_w)
-        return reconstructed[0] if len(reconstructed) == 1 else reconstructed
+        if tiles[0]._data.ndim == 1:
+            shape = grid_spec.grid_shape((region_h, region_w))
+            return reconstruct_tiles(tiles, shape[0], shape[1])
+
+        return reconstruct_tiles(tiles, region_h, region_w)
 
     def _process_by_chunks(self, streamable: MaskedStreamable) -> None:
         """Process with chunking for large images."""
