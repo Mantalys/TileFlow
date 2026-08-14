@@ -164,7 +164,7 @@ class TileFlowMasked:
 
         # Apply global mask only once instead of once per overlapping tile.
         if self.consider_mask and mask is not None:
-            array_f32 *= mask[np.newaxis, :, :]
+            array_f32[:, mask == 0] = 0
 
         grid_spec = GridSpec(size=self.tile_size, overlap=self.tile_overlap)
 
@@ -174,7 +174,6 @@ class TileFlowMasked:
             y0, y1 = tile_spec.geometry.halo.y0, tile_spec.geometry.halo.y1
             if self.consider_mask and mask is not None:
                 tile_mask = mask[y0:y1, x0:x1]
-
                 if not np.any(tile_mask):
                     continue
             tile_region = array_f32[:, y0:y1, x0:x1]
