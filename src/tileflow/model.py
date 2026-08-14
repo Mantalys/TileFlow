@@ -179,11 +179,6 @@ class TileFlowMasked:
                     continue
             tile_region = array_f32[:, y0:y1, x0:x1]
 
-            # apply mask if provided
-            if self.consider_mask and tile_mask is not None:
-                # multiply tile region by mask to apply mask, on each channel
-                tile_region = tile_region * tile_mask
-
             tile_processed = self._tile_processor(tile_region, tile_spec)
 
             tiles.append(ProcessedTile(tile_spec=tile_spec, data=tile_processed))
