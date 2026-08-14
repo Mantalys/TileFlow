@@ -129,10 +129,6 @@ class TileFlowMasked:
             result = self._process_by_tiles(array, mask)
         return result
 
-    def normalize_mi_ma(self, x: np.ndarray, mi: float, ma: float) -> np.ndarray:
-        # assume mi < ma and handle division by zero
-        return np.clip((x - mi) / (ma - mi), 0, 1)
-
     def _process_by_tiles(
         self, array: np.ndarray, mask: np.ndarray | None = None, return_tiles: bool = False
     ) -> np.ndarray | list[ProcessedTile]:
@@ -147,11 +143,28 @@ class TileFlowMasked:
 
         n_channels, region_h, region_w = array.shape
 
-        for i in range(n_channels):
-            if self.rescale_ranges[i] is not None:
-                vmin, vmax = self.rescale_ranges[i]
-                if vmin is not None and vmax is not None:
-                    array[i] = self.normalize_mi_ma(array[i], vmin, vmax)
+        array_f32 = array.astype(np.float32, copy=True)
+
+        for i, rescale_range in enumerate(self.rescale_ranges):
+            if rescale_range is None:
+                vmin, vmax = array_f32[i].min(), array_f32[i].max()
+            else:
+                vmin, vmax = rescale_range
+            if vmin is None:
+                vmin = array_f32[i].min()
+            if vmax is None:
+                vmax = array_f32[i].max()
+            if vmin == vmax:
+                channel.fill(0.0)
+            else:
+                channel = array_f32[i]
+                channel -= vmin
+                channel *= 1.0 / (vmax - vmin)
+                np.clip(channel, 0.0, 1.0, out=channel)
+
+        # Apply global mask only once instead of once per overlapping tile.
+        if self.consider_mask and mask is not None:
+            array_f32 *= mask[np.newaxis, :, :]
 
         grid_spec = GridSpec(size=self.tile_size, overlap=self.tile_overlap)
 
@@ -159,19 +172,18 @@ class TileFlowMasked:
         for tile_spec in grid_spec.iter_tiles(region_h, region_w):
             x0, x1 = tile_spec.geometry.halo.x0, tile_spec.geometry.halo.x1
             y0, y1 = tile_spec.geometry.halo.y0, tile_spec.geometry.halo.y1
-            tile_mask = mask[y0:y1, x0:x1] if mask is not None else None
-            # skip empty tiles
-            if self.consider_mask and tile_mask is not None and np.all(tile_mask == 0):
-                continue
-            tile_region = array[:, y0:y1, x0:x1]
+            if self.consider_mask and mask is not None:
+                tile_mask = mask[y0:y1, x0:x1]
+
+                if not np.any(tile_mask):
+                    continue
+            tile_region = array_f32[:, y0:y1, x0:x1]
 
             # apply mask if provided
             if self.consider_mask and tile_mask is not None:
                 # multiply tile region by mask to apply mask, on each channel
                 tile_region = tile_region * tile_mask
 
-            if tile_region.ndim != 3:
-                raise ValueError("tile_region must be (C, H, W), got {}".format(tile_region.shape))
             tile_processed = self._tile_processor(tile_region, tile_spec)
 
             tiles.append(ProcessedTile(tile_spec=tile_spec, data=tile_processed))
