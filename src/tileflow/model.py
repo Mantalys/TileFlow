@@ -69,13 +69,17 @@ class TileFlowMasked:
         threshold: int | float | None = None,
         rescale_range: TupleInt2 | None = None,
     ) -> None:
+        if channel_index < 0:
+            raise ValueError(f"Channel index must be non-negative, got {channel_index}")
         if channel_index in self.channel_indices:
             raise ValueError(f"Channel index {channel_index} is already added")
         self.channel_indices.append(channel_index)
         self.thresholds.append(threshold)
         # check the range is strictly ordered
         if rescale_range is not None and rescale_range[0] >= rescale_range[1]:
-            raise ValueError("rescale_range must be ordered (min < max), got {rescale_range}")
+            raise ValueError(
+                f"rescale_range must be ordered (min < max), got (min={rescale_range[0]}, max={rescale_range[1]})"
+            )
         self.rescale_ranges.append(rescale_range)
 
     def setup(
@@ -155,7 +159,7 @@ class TileFlowMasked:
             if vmax is None:
                 vmax = array_f32[i].max()
             if vmin == vmax:
-                channel.fill(0.0)
+                array_f32[i].fill(0.0)
             else:
                 channel = array_f32[i]
                 channel -= vmin
