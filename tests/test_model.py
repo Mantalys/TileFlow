@@ -4,6 +4,7 @@ import numpy as np
 
 SIZE_256 = (256, 256)
 
+
 def _tile():
     return 0
 
@@ -29,6 +30,7 @@ def test_setup():
         tileflow.setup(0, _tile)
     tileflow.add_channel(0)
     tileflow.setup(0, _tile)
+
 
 def test_process_by_tiles():
     def _dummy_tile(tile, spec):

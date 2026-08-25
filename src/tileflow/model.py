@@ -14,7 +14,7 @@ TileProcessor = Callable[
 ]
 
 ChunkSink = Callable[
-    [np.ndarray, TileSpec],
+    [np.ndarray | None, TileSpec],
     None,
 ]
 
@@ -198,6 +198,8 @@ class TileFlowMasked:
 
     def _process_by_chunks(self, streamable: MaskedStreamable) -> None:
         """Process with chunking for large images."""
+        if self.chunk_size is None or self._chunk_sink is None:
+            raise RuntimeError("chunk_size and chunk_sink must be set")
         shape = streamable.get_shape_hw()
         chunk_grid_spec = GridSpec(size=self.chunk_size, overlap=self.chunk_overlap)
 
@@ -208,6 +210,8 @@ class TileFlowMasked:
 
             # skip empty chunks
             if self.consider_mask and np.all(chunk_mask == 0):
+                # call chunk sink with None to indicate empty chunk, to allow upper layers to handle it
+                self._chunk_sink(None, chunk_spec)
                 continue
 
             # read region there to optimize disk access, receiving np.ndarray
@@ -215,7 +219,8 @@ class TileFlowMasked:
 
             if len(self.channel_indices) == 1:
                 if self.thresholds[0] is not None and np.max(chunk_region) < self.thresholds[0]:
-                    # consider the chunk empty
+                    # call chunk sink with None to indicate empty chunk, to allow upper layers to handle it
+                    self._chunk_sink(None, chunk_spec)
                     continue
 
             chunk_output = self._process_by_tiles(chunk_region, chunk_mask, return_tiles=False)
