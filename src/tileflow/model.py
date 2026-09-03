@@ -164,7 +164,7 @@ class TileFlowMasked:
                 channel = array_f32[i]
                 channel -= vmin
                 channel *= 1.0 / (vmax - vmin)
-                np.clip(channel, 0.0, 1.0, out=channel)
+                np.clip(channel, 0.0, 1.0, out=array_f32[i])
 
         # Apply global mask only once instead of once per overlapping tile.
         if self.consider_mask and mask is not None:
